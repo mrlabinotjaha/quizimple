@@ -13,6 +13,7 @@ import { TemplateMarket } from '@/components/TemplateMarket';
 import { QuizDetail } from '@/components/QuizDetail';
 import { CreateQuiz } from '@/components/CreateQuiz';
 import { Settings } from '@/components/Settings';
+import { API_URL } from '@/config';
 import '@/styles/index.css';
 
 // Loading spinner component
@@ -200,8 +201,7 @@ function TemplatesPage() {
 function CreateQuizPage() {
   const navigate = useNavigate();
   const { token } = useAuth();
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
-
+  
   const handleCreateRoom = async (quizId: string) => {
     try {
       const response = await fetch(`${API_URL}/rooms?quiz_id=${quizId}`, {
@@ -233,8 +233,7 @@ function EditQuizPage() {
   const { token } = useAuth();
   const [quiz, setQuiz] = useState(null);
   const [loading, setLoading] = useState(true);
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
-
+  
   useEffect(() => {
     if (quizId && token) {
       fetch(`${API_URL}/quizzes/${quizId}`, {
@@ -297,8 +296,7 @@ function QuizDetailPage() {
   const { token } = useAuth();
   const [quiz, setQuiz] = useState(null);
   const [loading, setLoading] = useState(true);
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
-
+  
   useEffect(() => {
     if (quizId && token) {
       fetch(`${API_URL}/quizzes/${quizId}`, {
