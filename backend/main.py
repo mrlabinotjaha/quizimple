@@ -38,8 +38,16 @@ from template_manager import (
     increment_uses, rate_template, delete_template, get_featured_templates,
     get_categories_with_counts
 )
+from database import init_db
 
 app = FastAPI(title="Quiz App API")
+
+# Initialize database tables on startup
+@app.on_event("startup")
+async def startup_event():
+    print("Initializing database...")
+    init_db()
+    print("Database initialized successfully!")
 
 app.add_middleware(
     CORSMiddleware,

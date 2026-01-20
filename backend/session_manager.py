@@ -1,10 +1,7 @@
 from datetime import datetime
 import uuid
 from models import QuizSession, PlayerResult, QuestionStat
-
-# In-memory storage for quiz sessions
-sessions_db: dict[str, QuizSession] = {}
-quiz_sessions_index: dict[str, list[str]] = {}  # quiz_id -> [session_ids]
+from database import SessionLocal, SessionDB
 
 
 def save_session(
@@ -17,114 +14,173 @@ def save_session(
     questions: list
 ) -> QuizSession:
     """Save a completed quiz session with all player results and statistics."""
-    session_id = str(uuid.uuid4())
-    ended_at = datetime.utcnow()
+    db = SessionLocal()
+    try:
+        session_id = str(uuid.uuid4())
+        ended_at = datetime.utcnow()
 
-    # Convert players to PlayerResult objects
-    participants = []
-    for player_id, player in players.items():
-        total_questions = len(questions)
-        correct = player.correct_answers
-        wrong = total_questions - correct
+        # Convert players to PlayerResult objects
+        participants = []
+        for player_id, player in players.items():
+            total_questions = len(questions)
+            correct = player.correct_answers
+            wrong = total_questions - correct
 
-        participant = PlayerResult(
-            user_id=player_id,
-            username=player.username,
-            score=player.score,
-            correct_answers=correct,
-            wrong_answers=wrong,
-            tab_switches=player.tab_switches,
-            answers=player.answers
+            participant = PlayerResult(
+                user_id=player_id,
+                username=player.username,
+                score=player.score,
+                correct_answers=correct,
+                wrong_answers=wrong,
+                tab_switches=player.tab_switches,
+                answers=player.answers
+            )
+            participants.append(participant)
+
+        # Calculate question statistics
+        question_stats = []
+        for q_idx, question in enumerate(questions):
+            answer_distribution: dict[int, int] = {}
+            correct_attempts = 0
+            total_attempts = 0
+
+            for player in players.values():
+                if q_idx in player.answers:
+                    total_attempts += 1
+                    player_answers = player.answers[q_idx]
+
+                    # Track answer distribution
+                    for ans in player_answers:
+                        answer_distribution[ans] = answer_distribution.get(ans, 0) + 1
+
+                    # Check if correct
+                    if sorted(player_answers) == sorted(question.correct):
+                        correct_attempts += 1
+
+            accuracy = (correct_attempts / total_attempts * 100) if total_attempts > 0 else 0
+
+            stat = QuestionStat(
+                question_index=q_idx,
+                question_text=question.text,
+                correct_answers=question.correct,
+                total_attempts=total_attempts,
+                correct_attempts=correct_attempts,
+                accuracy_percentage=round(accuracy, 1),
+                answer_distribution=answer_distribution
+            )
+            question_stats.append(stat.model_dump())
+
+        # Sort participants by score
+        participants.sort(key=lambda p: p.score, reverse=True)
+
+        # Save to database
+        db_session = SessionDB(
+            id=session_id,
+            quiz_id=quiz_id,
+            quiz_name=quiz_name,
+            room_code=room_code,
+            host_id=host_id,
+            started_at=started_at,
+            ended_at=ended_at,
+            total_questions=len(questions),
+            participants=[p.model_dump() for p in participants],
+            question_stats=question_stats
         )
-        participants.append(participant)
+        db.add(db_session)
+        db.commit()
 
-    # Calculate question statistics
-    question_stats = []
-    for q_idx, question in enumerate(questions):
-        answer_distribution: dict[int, int] = {}
-        correct_attempts = 0
-        total_attempts = 0
-
-        for player in players.values():
-            if q_idx in player.answers:
-                total_attempts += 1
-                player_answers = player.answers[q_idx]
-
-                # Track answer distribution
-                for ans in player_answers:
-                    answer_distribution[ans] = answer_distribution.get(ans, 0) + 1
-
-                # Check if correct
-                if sorted(player_answers) == sorted(question.correct):
-                    correct_attempts += 1
-
-        accuracy = (correct_attempts / total_attempts * 100) if total_attempts > 0 else 0
-
-        stat = QuestionStat(
-            question_index=q_idx,
-            question_text=question.text,
-            correct_answers=question.correct,
-            total_attempts=total_attempts,
-            correct_attempts=correct_attempts,
-            accuracy_percentage=round(accuracy, 1),
-            answer_distribution=answer_distribution
+        session = QuizSession(
+            id=session_id,
+            quiz_id=quiz_id,
+            quiz_name=quiz_name,
+            room_code=room_code,
+            host_id=host_id,
+            started_at=started_at.isoformat(),
+            ended_at=ended_at.isoformat(),
+            total_questions=len(questions),
+            participants=participants,
+            question_stats=question_stats
         )
-        question_stats.append(stat.model_dump())
 
-    # Sort participants by score
-    participants.sort(key=lambda p: p.score, reverse=True)
-
-    session = QuizSession(
-        id=session_id,
-        quiz_id=quiz_id,
-        quiz_name=quiz_name,
-        room_code=room_code,
-        host_id=host_id,
-        started_at=started_at.isoformat(),
-        ended_at=ended_at.isoformat(),
-        total_questions=len(questions),
-        participants=participants,
-        question_stats=question_stats
-    )
-
-    # Store session
-    sessions_db[session_id] = session
-
-    # Index by quiz_id
-    if quiz_id not in quiz_sessions_index:
-        quiz_sessions_index[quiz_id] = []
-    quiz_sessions_index[quiz_id].append(session_id)
-
-    print(f"[DEBUG session_manager] Session saved - id: {session_id}, quiz_id: {quiz_id}")
-    print(f"[DEBUG session_manager] sessions_db count: {len(sessions_db)}")
-    print(f"[DEBUG session_manager] quiz_sessions_index[{quiz_id}]: {quiz_sessions_index[quiz_id]}")
-
-    return session
+        print(f"[DEBUG session_manager] Session saved - id: {session_id}, quiz_id: {quiz_id}")
+        return session
+    finally:
+        db.close()
 
 
 def get_session(session_id: str) -> QuizSession | None:
     """Get a specific quiz session by ID."""
-    return sessions_db.get(session_id)
+    db = SessionLocal()
+    try:
+        session = db.query(SessionDB).filter(SessionDB.id == session_id).first()
+        if not session:
+            return None
+
+        participants = [PlayerResult(**p) for p in (session.participants or [])]
+        return QuizSession(
+            id=session.id,
+            quiz_id=session.quiz_id,
+            quiz_name=session.quiz_name,
+            room_code=session.room_code,
+            host_id=session.host_id,
+            started_at=session.started_at.isoformat(),
+            ended_at=session.ended_at.isoformat(),
+            total_questions=session.total_questions,
+            participants=participants,
+            question_stats=session.question_stats or []
+        )
+    finally:
+        db.close()
 
 
 def get_quiz_sessions(quiz_id: str) -> list[QuizSession]:
     """Get all sessions for a specific quiz."""
-    print(f"[DEBUG session_manager] get_quiz_sessions called - quiz_id: {quiz_id}")
-    print(f"[DEBUG session_manager] quiz_sessions_index keys: {list(quiz_sessions_index.keys())}")
-    session_ids = quiz_sessions_index.get(quiz_id, [])
-    print(f"[DEBUG session_manager] session_ids for quiz: {session_ids}")
-    sessions = [sessions_db[sid] for sid in session_ids if sid in sessions_db]
-    # Sort by ended_at descending (most recent first)
-    sessions.sort(key=lambda s: s.ended_at, reverse=True)
-    print(f"[DEBUG session_manager] returning {len(sessions)} sessions")
-    return sessions
+    db = SessionLocal()
+    try:
+        sessions = db.query(SessionDB).filter(SessionDB.quiz_id == quiz_id).order_by(SessionDB.ended_at.desc()).all()
+        result = []
+        for session in sessions:
+            participants = [PlayerResult(**p) for p in (session.participants or [])]
+            result.append(QuizSession(
+                id=session.id,
+                quiz_id=session.quiz_id,
+                quiz_name=session.quiz_name,
+                room_code=session.room_code,
+                host_id=session.host_id,
+                started_at=session.started_at.isoformat(),
+                ended_at=session.ended_at.isoformat(),
+                total_questions=session.total_questions,
+                participants=participants,
+                question_stats=session.question_stats or []
+            ))
+        return result
+    finally:
+        db.close()
 
 
 def get_user_sessions(user_id: str) -> list[QuizSession]:
     """Get all sessions hosted by a specific user."""
-    sessions = [s for s in sessions_db.values() if s.host_id == user_id]
-    sessions.sort(key=lambda s: s.ended_at, reverse=True)
-    return sessions
+    db = SessionLocal()
+    try:
+        sessions = db.query(SessionDB).filter(SessionDB.host_id == user_id).order_by(SessionDB.ended_at.desc()).all()
+        result = []
+        for session in sessions:
+            participants = [PlayerResult(**p) for p in (session.participants or [])]
+            result.append(QuizSession(
+                id=session.id,
+                quiz_id=session.quiz_id,
+                quiz_name=session.quiz_name,
+                room_code=session.room_code,
+                host_id=session.host_id,
+                started_at=session.started_at.isoformat(),
+                ended_at=session.ended_at.isoformat(),
+                total_questions=session.total_questions,
+                participants=participants,
+                question_stats=session.question_stats or []
+            ))
+        return result
+    finally:
+        db.close()
 
 
 def get_quiz_analytics(quiz_id: str) -> dict:
