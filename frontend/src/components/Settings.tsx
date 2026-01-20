@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
-import { ConfirmModal } from './ConfirmModal';
 import { ThemeToggle } from './ThemeToggle';
 import { API_URL } from '@/config';
 import {
@@ -29,7 +28,7 @@ export function Settings({ onBack }: SettingsProps) {
 
   // Profile state
   const [username, setUsername] = useState(user?.username || '');
-  const [email, setEmail] = useState(user?.email || '');
+  const email = user?.email || '';
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
 
   // Password state

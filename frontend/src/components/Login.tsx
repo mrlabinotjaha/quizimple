@@ -5,7 +5,6 @@ import { Zap, ArrowRight } from 'lucide-react';
 
 interface LoginProps {
   onSwitchToRegister: () => void;
-  onSwitchToGuest?: () => void;
   onBackToLanding?: () => void;
 }
 
@@ -18,6 +17,7 @@ declare global {
             client_id: string;
             callback: (response: { credential: string }) => void;
           }) => void;
+          prompt: () => void;
           renderButton: (
             element: HTMLElement,
             options: {
@@ -35,7 +35,7 @@ declare global {
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
-export function Login({ onSwitchToRegister, onSwitchToGuest, onBackToLanding }: LoginProps) {
+export function Login({ onSwitchToRegister, onBackToLanding }: LoginProps) {
   const [usernameOrEmail, setUsernameOrEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');

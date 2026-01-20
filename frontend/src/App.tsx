@@ -147,7 +147,6 @@ function LoginPage() {
   return (
     <Login
       onSwitchToRegister={() => navigate('/register')}
-      onSwitchToGuest={() => navigate('/join')}
       onBackToLanding={() => navigate('/')}
     />
   );
@@ -160,7 +159,6 @@ function RegisterPage() {
   return (
     <Register
       onSwitchToLogin={() => navigate('/login')}
-      onSwitchToGuest={() => navigate('/join')}
       onBackToLanding={() => navigate('/')}
     />
   );
