@@ -9,6 +9,7 @@ dist/
 dist-ssr/
 build/
 *.local
+backend/static/
 
 # Environment files
 .env
