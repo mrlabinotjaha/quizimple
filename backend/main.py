@@ -220,7 +220,7 @@ async def delete_account(data: AccountDelete, current_user: dict = Depends(get_c
 # Quiz endpoints
 @app.post("/api/quizzes", response_model=Quiz)
 async def create_new_quiz(quiz_data: QuizCreate, current_user: dict = Depends(get_current_user)):
-    quiz = create_quiz(quiz_data.name, current_user["id"], quiz_data.hide_results)
+    quiz = create_quiz(quiz_data.name, current_user["id"], quiz_data.hide_results, quiz_data.fun_mode)
     return quiz
 
 
@@ -258,7 +258,7 @@ async def update_quiz(quiz_id: str, quiz_data: QuizUpdate, current_user: dict = 
         raise HTTPException(status_code=404, detail="Quiz not found")
     if quiz.owner_id != current_user["id"]:
         raise HTTPException(status_code=403, detail="Not authorized")
-    updated_quiz = update_quiz_settings(quiz_id, quiz_data.hide_results)
+    updated_quiz = update_quiz_settings(quiz_id, quiz_data.hide_results, quiz_data.fun_mode)
     return updated_quiz
 
 
@@ -652,7 +652,8 @@ async def websocket_endpoint(
                                     "correct": question.correct  # For host display
                                 },
                                 "index": 0,
-                                "total": len(quiz.questions)
+                                "total": len(quiz.questions),
+                                "fun_mode": quiz.fun_mode
                             }
                         })
 
@@ -723,7 +724,8 @@ async def websocket_endpoint(
                                     "correct": question.correct  # For host display
                                 },
                                 "index": room.current_question,
-                                "total": len(quiz.questions)
+                                "total": len(quiz.questions),
+                                "fun_mode": quiz.fun_mode
                             }
                         })
                 else:
@@ -762,12 +764,25 @@ async def websocket_endpoint(
                     else:
                         print(f"[DEBUG] Session NOT saved - room_code in room_start_times: {room_code in room_start_times}, quiz: {quiz is not None}")
 
+                    # Prepare questions for review (with correct answers)
+                    questions_review = []
+                    if quiz:
+                        for q in quiz.questions:
+                            questions_review.append({
+                                "text": q.text,
+                                "type": q.type,
+                                "options": q.options,
+                                "correct": q.correct,
+                                "points": q.points
+                            })
+
                     await manager.broadcast_to_room(room_code, {
                         "event": "quiz_ended",
                         "data": {
                             "leaderboard": get_leaderboard(room_code),
                             "hide_results": quiz.hide_results if quiz else False,
-                            "session": session_data
+                            "session": session_data,
+                            "questions": questions_review
                         }
                     })
 
@@ -804,12 +819,25 @@ async def websocket_endpoint(
                     else:
                         print(f"[DEBUG] Session NOT saved via end_quiz - room_code in room_start_times: {room_code in room_start_times}")
 
+                    # Prepare questions for review (with correct answers)
+                    questions_review = []
+                    if quiz:
+                        for q in quiz.questions:
+                            questions_review.append({
+                                "text": q.text,
+                                "type": q.type,
+                                "options": q.options,
+                                "correct": q.correct,
+                                "points": q.points
+                            })
+
                     await manager.broadcast_to_room(room_code, {
                         "event": "quiz_ended",
                         "data": {
                             "leaderboard": get_leaderboard(room_code),
                             "hide_results": quiz.hide_results if quiz else False,
-                            "session": session_data
+                            "session": session_data,
+                            "questions": questions_review
                         }
                     })
 

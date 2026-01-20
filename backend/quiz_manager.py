@@ -6,18 +6,21 @@ from models import Quiz, Question, QuestionCreate, QuestionType
 quizzes_db: dict[str, Quiz] = {}  # quiz_id -> Quiz
 
 
-def create_quiz(name: str, owner_id: str, hide_results: bool = False) -> Quiz:
+def create_quiz(name: str, owner_id: str, hide_results: bool = False, fun_mode: bool = False) -> Quiz:
     quiz_id = str(uuid.uuid4())
-    quiz = Quiz(id=quiz_id, name=name, owner_id=owner_id, questions=[], hide_results=hide_results)
+    quiz = Quiz(id=quiz_id, name=name, owner_id=owner_id, questions=[], hide_results=hide_results, fun_mode=fun_mode)
     quizzes_db[quiz_id] = quiz
     return quiz
 
 
-def update_quiz_settings(quiz_id: str, hide_results: bool) -> Optional[Quiz]:
+def update_quiz_settings(quiz_id: str, hide_results: bool = None, fun_mode: bool = None) -> Optional[Quiz]:
     quiz = quizzes_db.get(quiz_id)
     if not quiz:
         return None
-    quiz.hide_results = hide_results
+    if hide_results is not None:
+        quiz.hide_results = hide_results
+    if fun_mode is not None:
+        quiz.fun_mode = fun_mode
     return quiz
 
 

@@ -180,12 +180,6 @@ export function LandingPage({ onGetStarted, onLogin, onTemplateMarket, onJoinQui
                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                   </span>
                 </button>
-                <button className="group px-8 py-4 bg-white dark:bg-[#1A1A1F] text-[#1E1E2E] dark:text-white font-semibold rounded-2xl border-2 border-[#1E1E2E]/10 dark:border-white/10 hover:border-[#1E1E2E]/20 dark:hover:border-white/20 transition-all flex items-center justify-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-[#1E1E2E] dark:bg-white flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Play className="w-3 h-3 text-white dark:text-[#1E1E2E] ml-0.5" fill="currentColor" />
-                  </div>
-                  Watch Demo
-                </button>
               </div>
 
               <div className="flex items-center gap-6">
@@ -206,7 +200,7 @@ export function LandingPage({ onGetStarted, onLogin, onTemplateMarket, onJoinQui
                 </div>
                 <div>
                   <div className="flex items-center gap-1 mb-0.5">
-                    {[1,2,3,4,5].map(i => (
+                    {[1, 2, 3, 4, 5].map(i => (
                       <Star key={i} className="w-4 h-4 text-amber-400" fill="#fbbf24" />
                     ))}
                   </div>
@@ -247,16 +241,14 @@ export function LandingPage({ onGetStarted, onLogin, onTemplateMarket, onJoinQui
                       {['"null"', '"undefined"', '"object"', '"boolean"'].map((option, i) => (
                         <div
                           key={i}
-                          className={`p-4 rounded-xl border-2 transition-all cursor-pointer ${
-                            i === 2
+                          className={`p-4 rounded-xl border-2 transition-all cursor-pointer ${i === 2
                               ? 'border-[#FF6B4A] bg-[#FF6B4A]/5 dark:bg-[#FF6B4A]/10'
                               : 'border-[#1E1E2E]/10 dark:border-white/10 hover:border-[#1E1E2E]/20 dark:hover:border-white/20'
-                          }`}
+                            }`}
                         >
                           <div className="flex items-center gap-3">
-                            <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
-                              i === 2 ? 'border-[#FF6B4A] bg-[#FF6B4A]' : 'border-[#1E1E2E]/20 dark:border-white/20'
-                            }`}>
+                            <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${i === 2 ? 'border-[#FF6B4A] bg-[#FF6B4A]' : 'border-[#1E1E2E]/20 dark:border-white/20'
+                              }`}>
                               {i === 2 && <Check className="w-4 h-4 text-white" />}
                             </div>
                             <span className="font-medium text-[#1E1E2E] dark:text-white">{option}</span>
@@ -361,9 +353,8 @@ export function LandingPage({ onGetStarted, onLogin, onTemplateMarket, onJoinQui
             {features.map((feature, i) => (
               <div
                 key={i}
-                className={`group relative bg-white/5 backdrop-blur-sm rounded-3xl p-8 border border-white/10 hover:border-white/20 transition-all duration-500 hover:-translate-y-1 ${
-                  activeFeature === i ? 'ring-2 ring-[#FF6B4A]/50' : ''
-                }`}
+                className={`group relative bg-white/5 backdrop-blur-sm rounded-3xl p-8 border border-white/10 hover:border-white/20 transition-all duration-500 hover:-translate-y-1 ${activeFeature === i ? 'ring-2 ring-[#FF6B4A]/50' : ''
+                  }`}
                 onMouseEnter={() => setActiveFeature(i)}
               >
                 <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${feature.accent} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform`}>
@@ -440,9 +431,8 @@ export function LandingPage({ onGetStarted, onLogin, onTemplateMarket, onJoinQui
                 ].map((template, i) => (
                   <div
                     key={i}
-                    className={`bg-white dark:bg-[#1A1A1F] rounded-2xl p-5 border border-[#1E1E2E]/5 dark:border-white/10 shadow-lg dark:shadow-black/20 hover:shadow-xl transition-all hover:-translate-y-1 ${
-                      i === 0 ? 'col-span-2' : ''
-                    }`}
+                    className={`bg-white dark:bg-[#1A1A1F] rounded-2xl p-5 border border-[#1E1E2E]/5 dark:border-white/10 shadow-lg dark:shadow-black/20 hover:shadow-xl transition-all hover:-translate-y-1 ${i === 0 ? 'col-span-2' : ''
+                      }`}
                   >
                     <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${template.color} flex items-center justify-center mb-4`}>
                       <Sparkles className="w-5 h-5 text-white" />

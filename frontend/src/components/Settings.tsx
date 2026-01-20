@@ -15,7 +15,9 @@ import {
   Zap,
   Shield,
   Palette,
-  Bell
+  Bell,
+  Clock,
+  Settings2
 } from 'lucide-react';
 
 interface SettingsProps {
@@ -44,8 +46,18 @@ export function Settings({ onBack }: SettingsProps) {
   const [deletePassword, setDeletePassword] = useState('');
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
+  // Quiz defaults state (stored in localStorage)
+  const [defaultTimeLimit, setDefaultTimeLimit] = useState(() => {
+    const saved = localStorage.getItem('quizimple_default_time_limit');
+    return saved ? parseInt(saved, 10) : 30;
+  });
+  const [defaultPoints, setDefaultPoints] = useState(() => {
+    const saved = localStorage.getItem('quizimple_default_points');
+    return saved ? parseInt(saved, 10) : 100;
+  });
+
   // Active section
-  const [activeSection, setActiveSection] = useState<'profile' | 'security' | 'appearance' | 'notifications'>('profile');
+  const [activeSection, setActiveSection] = useState<'profile' | 'security' | 'quiz-defaults' | 'appearance' | 'notifications'>('profile');
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -170,9 +182,16 @@ export function Settings({ onBack }: SettingsProps) {
     }
   };
 
+  const handleSaveQuizDefaults = () => {
+    localStorage.setItem('quizimple_default_time_limit', defaultTimeLimit.toString());
+    localStorage.setItem('quizimple_default_points', defaultPoints.toString());
+    showToast('Quiz defaults saved', 'success');
+  };
+
   const sections = [
     { id: 'profile' as const, label: 'Profile', icon: User },
     { id: 'security' as const, label: 'Security', icon: Shield },
+    { id: 'quiz-defaults' as const, label: 'Quiz Defaults', icon: Settings2 },
     { id: 'appearance' as const, label: 'Appearance', icon: Palette },
     { id: 'notifications' as const, label: 'Notifications', icon: Bell },
   ];
@@ -424,6 +443,109 @@ export function Settings({ onBack }: SettingsProps) {
                   </div>
                 </div>
               </>
+            )}
+
+            {/* Quiz Defaults Section */}
+            {activeSection === 'quiz-defaults' && (
+              <div className="bg-white dark:bg-[#1A1A1F] rounded-2xl border border-[#1E1E2E]/5 dark:border-white/10 shadow-sm overflow-hidden">
+                <div className="p-6 border-b border-[#1E1E2E]/5 dark:border-white/10">
+                  <h2 className="text-lg font-semibold text-[#1E1E2E] dark:text-white" style={{ fontFamily: "'Instrument Serif', serif" }}>
+                    Quiz Defaults
+                  </h2>
+                  <p className="text-sm text-[#1E1E2E]/50 dark:text-white/50 mt-1">
+                    Set default values for new quiz questions
+                  </p>
+                </div>
+
+                <div className="p-6 space-y-6">
+                  {/* Default Time Limit */}
+                  <div>
+                    <label className="block text-sm font-medium text-[#1E1E2E] dark:text-white mb-2">
+                      Default Time Limit (seconds)
+                    </label>
+                    <div className="flex items-center gap-4">
+                      <div className="relative flex-1">
+                        <Clock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#1E1E2E]/30 dark:text-white/30" />
+                        <input
+                          type="number"
+                          min={5}
+                          max={300}
+                          value={defaultTimeLimit}
+                          onChange={(e) => setDefaultTimeLimit(Math.max(5, Math.min(300, parseInt(e.target.value) || 30)))}
+                          className="w-full pl-12 pr-4 py-3 bg-[#FFFBF7] dark:bg-[#0D0D0F] border border-[#1E1E2E]/10 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF6B4A]/30 focus:border-[#FF6B4A] transition-all text-[#1E1E2E] dark:text-white"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        {[15, 30, 60].map((time) => (
+                          <button
+                            key={time}
+                            type="button"
+                            onClick={() => setDefaultTimeLimit(time)}
+                            className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                              defaultTimeLimit === time
+                                ? 'bg-[#FF6B4A] text-white'
+                                : 'bg-[#1E1E2E]/5 dark:bg-white/10 text-[#1E1E2E]/70 dark:text-white/70 hover:bg-[#1E1E2E]/10 dark:hover:bg-white/20'
+                            }`}
+                          >
+                            {time}s
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <p className="text-xs text-[#1E1E2E]/40 dark:text-white/40 mt-1.5">
+                      Time allowed to answer each question (5-300 seconds)
+                    </p>
+                  </div>
+
+                  {/* Default Points */}
+                  <div>
+                    <label className="block text-sm font-medium text-[#1E1E2E] dark:text-white mb-2">
+                      Default Points per Question
+                    </label>
+                    <div className="flex items-center gap-4">
+                      <div className="relative flex-1">
+                        <Zap className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#1E1E2E]/30 dark:text-white/30" />
+                        <input
+                          type="number"
+                          min={10}
+                          max={1000}
+                          step={10}
+                          value={defaultPoints}
+                          onChange={(e) => setDefaultPoints(Math.max(10, Math.min(1000, parseInt(e.target.value) || 100)))}
+                          className="w-full pl-12 pr-4 py-3 bg-[#FFFBF7] dark:bg-[#0D0D0F] border border-[#1E1E2E]/10 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF6B4A]/30 focus:border-[#FF6B4A] transition-all text-[#1E1E2E] dark:text-white"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        {[50, 100, 200].map((pts) => (
+                          <button
+                            key={pts}
+                            type="button"
+                            onClick={() => setDefaultPoints(pts)}
+                            className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                              defaultPoints === pts
+                                ? 'bg-[#FF6B4A] text-white'
+                                : 'bg-[#1E1E2E]/5 dark:bg-white/10 text-[#1E1E2E]/70 dark:text-white/70 hover:bg-[#1E1E2E]/10 dark:hover:bg-white/20'
+                            }`}
+                          >
+                            {pts}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <p className="text-xs text-[#1E1E2E]/40 dark:text-white/40 mt-1.5">
+                      Points awarded for correct answers (10-1000)
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={handleSaveQuizDefaults}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#FF6B4A] to-[#FF8F6B] text-white font-medium rounded-xl hover:shadow-lg hover:shadow-[#FF6B4A]/30 transition-all"
+                  >
+                    <Save className="w-4 h-4" />
+                    Save Defaults
+                  </button>
+                </div>
+              </div>
             )}
 
             {/* Appearance Section */}

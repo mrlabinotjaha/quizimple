@@ -1,5 +1,6 @@
 import random
 import string
+import time
 from typing import Optional
 from models import Room, Player, RoomState
 from quiz_manager import get_quiz
@@ -75,6 +76,7 @@ def start_quiz(room_code: str, host_id: str) -> bool:
     room.state = RoomState.PLAYING
     room.current_question = 0
     room.answers_received = 0
+    room.question_start_time = time.time()
     return True
 
 
@@ -94,6 +96,9 @@ def submit_answer(room_code: str, user_id: str, question_index: int, answers: li
         return False  # Already answered
 
     player.answers[question_index] = answers
+    # Record how long it took to answer
+    if room.question_start_time > 0:
+        player.answer_times[question_index] = time.time() - room.question_start_time
     room.answers_received += 1
     return True
 
@@ -140,6 +145,7 @@ def next_question(room_code: str, host_id: str) -> bool:
 
     room.current_question += 1
     room.answers_received = 0
+    room.question_start_time = time.time()
     return True
 
 
@@ -160,18 +166,24 @@ def get_leaderboard(room_code: str) -> dict:
     quiz = get_quiz(room.quiz_id)
     total_questions = len(quiz.questions) if quiz else 0
 
-    players = [
-        {
+    players = []
+    for p in room.players.values():
+        # Calculate average answer time
+        times = list(p.answer_times.values())
+        avg_time = sum(times) / len(times) if times else 999999  # High value if no answers
+
+        players.append({
             "username": p.username,
             "score": p.score,
             "user_id": p.id,
             "tab_switches": p.tab_switches,
             "correct_answers": p.correct_answers,
-            "wrong_answers": total_questions - p.correct_answers
-        }
-        for p in room.players.values()
-    ]
-    players.sort(key=lambda x: x["score"], reverse=True)
+            "wrong_answers": total_questions - p.correct_answers,
+            "avg_time": round(avg_time, 2)
+        })
+
+    # Sort by score (descending), then by average time (ascending - faster is better)
+    players.sort(key=lambda x: (-x["score"], x["avg_time"]))
 
     return {
         "players": players,

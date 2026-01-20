@@ -15,6 +15,7 @@ export interface Quiz {
   owner_id: string;
   questions: Question[];
   hide_results: boolean;
+  fun_mode: boolean;
 }
 
 export interface User {
@@ -55,11 +56,21 @@ export interface LeaderboardEntry {
   tab_switches: number;
   correct_answers: number;
   wrong_answers: number;
+  avg_time?: number;  // Average answer time in seconds
+}
+
+export interface QuestionReview {
+  text: string;
+  type: QuestionType;
+  options: string[];
+  correct: number[];
+  points: number;
 }
 
 export interface LeaderboardData {
   players: LeaderboardEntry[];
   total_questions: number;
+  questions?: QuestionReview[];
 }
 
 // WebSocket events

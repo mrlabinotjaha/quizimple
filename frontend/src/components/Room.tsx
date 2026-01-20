@@ -40,6 +40,7 @@ export function Room({ roomCode, onLeave, guestName }: RoomProps) {
   const [results, setResults] = useState<QuestionResultsData | null>(null);
   const [leaderboard, setLeaderboard] = useState<LeaderboardData | null>(null);
   const [hideResults, setHideResults] = useState(false);
+  const [funMode, setFunMode] = useState(false);
   const [error, setError] = useState('');
   const [allAnswered, setAllAnswered] = useState(false);
 
@@ -49,10 +50,16 @@ export function Room({ roomCode, onLeave, guestName }: RoomProps) {
         setIsHost(message.data.is_host as boolean);
         setPlayers(message.data.players as Player[]);
         setTotalQuestions(message.data.total_questions as number);
-        if (message.data.state === 'lobby') {
+        // Host should always start in lobby - only start quiz via explicit action
+        // Players can reconnect to a playing game
+        if (message.data.is_host) {
+          setState('lobby');
+        } else if (message.data.state === 'lobby') {
           setState('lobby');
         } else if (message.data.state === 'playing') {
           setState('playing');
+        } else {
+          setState('lobby');
         }
         break;
 
@@ -66,6 +73,7 @@ export function Room({ roomCode, onLeave, guestName }: RoomProps) {
         setCurrentQuestion(message.data.question as QuestionDisplay);
         setQuestionIndex(message.data.index as number);
         setTotalQuestions(message.data.total as number);
+        setFunMode(message.data.fun_mode as boolean || false);
         setHasSubmitted(false);
         setAnswersReceived(0);
         setResults(null);
@@ -90,7 +98,10 @@ export function Room({ roomCode, onLeave, guestName }: RoomProps) {
         break;
 
       case 'quiz_ended':
-        setLeaderboard(message.data.leaderboard as LeaderboardData);
+        setLeaderboard({
+          ...(message.data.leaderboard as LeaderboardData),
+          questions: message.data.questions as LeaderboardData['questions']
+        });
         if (message.data.hide_results) {
           setHideResults(true);
         }
@@ -208,7 +219,11 @@ export function Room({ roomCode, onLeave, guestName }: RoomProps) {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">Connecting to room...</p>
+          <p className="text-muted-foreground mb-6">Connecting to room...</p>
+          <Button variant="outline" onClick={onLeave}>
+            <Home className="w-4 h-4 mr-2" />
+            Leave Room
+          </Button>
         </div>
       </div>
     );
@@ -310,6 +325,9 @@ export function Room({ roomCode, onLeave, guestName }: RoomProps) {
         totalQuestions={totalQuestions}
         onSubmit={handleSubmitAnswer}
         hasSubmitted={hasSubmitted}
+        answersReceived={answersReceived}
+        totalPlayers={players.length}
+        funMode={funMode}
       />
     );
   }

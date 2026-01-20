@@ -42,15 +42,18 @@ class Quiz(BaseModel):
     owner_id: str
     questions: list[Question] = []
     hide_results: bool = False  # Hide results from quiz takers
+    fun_mode: bool = False  # Enable chaotic fun effects during quiz
 
 
 class QuizCreate(BaseModel):
     name: str
     hide_results: bool = False
+    fun_mode: bool = False
 
 
 class QuizUpdate(BaseModel):
-    hide_results: bool
+    hide_results: bool = None
+    fun_mode: bool = None
 
 
 class UserCreate(BaseModel):
@@ -97,6 +100,7 @@ class Player(BaseModel):
     username: str
     score: int = 0
     answers: dict[int, list[int]] = {}  # question_index -> selected options
+    answer_times: dict[int, float] = {}  # question_index -> time taken in seconds
     tab_switches: int = 0  # cheat detection: number of times user switched tabs
     correct_answers: int = 0  # number of questions answered correctly
 
@@ -115,6 +119,7 @@ class Room(BaseModel):
     state: RoomState = RoomState.LOBBY
     current_question: int = 0
     answers_received: int = 0
+    question_start_time: float = 0.0  # timestamp when current question started
 
 
 # WebSocket message models

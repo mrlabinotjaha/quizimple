@@ -13,16 +13,28 @@ interface AddQuestionProps {
     points: number;
   }) => void;
   onCancel: () => void;
+  defaultTimeLimit?: number;
+  defaultPoints?: number;
 }
 
-export function AddQuestion({ onAdd, onCancel }: AddQuestionProps) {
+export function AddQuestion({ onAdd, onCancel, defaultTimeLimit, defaultPoints }: AddQuestionProps) {
   const { showToast } = useToast();
   const [text, setText] = useState('');
   const [type, setType] = useState<QuestionType>('single');
   const [options, setOptions] = useState(['', '', '', '']);
   const [correct, setCorrect] = useState<number[]>([]);
-  const [timeLimit, setTimeLimit] = useState(30);
-  const [points, setPoints] = useState(100);
+  const [timeLimit, setTimeLimit] = useState(() => {
+    // Use prop if provided, otherwise fall back to localStorage, then hardcoded default
+    if (defaultTimeLimit !== undefined) return defaultTimeLimit;
+    const saved = localStorage.getItem('quizimple_default_time_limit');
+    return saved ? parseInt(saved, 10) : 30;
+  });
+  const [points, setPoints] = useState(() => {
+    // Use prop if provided, otherwise fall back to localStorage, then hardcoded default
+    if (defaultPoints !== undefined) return defaultPoints;
+    const saved = localStorage.getItem('quizimple_default_points');
+    return saved ? parseInt(saved, 10) : 100;
+  });
 
   const handleOptionChange = (index: number, value: string) => {
     const newOptions = [...options];

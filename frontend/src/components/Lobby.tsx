@@ -42,18 +42,10 @@ export function Lobby({ roomCode, players, isHost, quizName, onStart, onLeave }:
           <Card className="bg-primary/10 border-primary/20">
             <CardContent className="py-6">
               <p className="text-sm text-muted-foreground mb-2">Room Code</p>
-              <div className="flex items-center justify-center gap-2 mb-4">
+              <div className="mb-4">
                 <span className="text-4xl font-bold tracking-widest text-primary">
                   {roomCode}
                 </span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={copyRoomCode}
-                  title="Copy room code"
-                >
-                  {copiedCode ? <Check className="w-5 h-5 text-green-500" /> : <Copy className="w-5 h-5" />}
-                </Button>
               </div>
               <div className="flex gap-2 justify-center">
                 <Button
