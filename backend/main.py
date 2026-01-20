@@ -47,6 +47,12 @@ app.add_middleware(
 )
 
 
+# Health check endpoint for Railway
+@app.get("/api/health")
+async def health_check():
+    return {"status": "healthy", "service": "quizimple-api"}
+
+
 # WebSocket connection manager
 class ConnectionManager:
     def __init__(self):

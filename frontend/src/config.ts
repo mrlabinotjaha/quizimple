@@ -1,10 +1,18 @@
 const hostname = window.location.hostname;
 const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
 
-export const API_URL = isLocalhost
-  ? 'http://localhost:8000/api'
-  : `http://${hostname}:8000/api`;
+// Use environment variable if set, otherwise fall back to localhost
+const apiBase = import.meta.env.VITE_API_URL;
+const wsBase = import.meta.env.VITE_WS_URL;
 
-export const WS_URL = isLocalhost
-  ? 'ws://localhost:8000/ws'
-  : `ws://${hostname}:8000/ws`;
+export const API_URL = apiBase
+  ? `${apiBase}/api`
+  : isLocalhost
+    ? 'http://localhost:8000/api'
+    : `https://${hostname}/api`;
+
+export const WS_URL = wsBase
+  ? `${wsBase}/ws`
+  : isLocalhost
+    ? 'ws://localhost:8000/ws'
+    : `wss://${hostname}/ws`;
