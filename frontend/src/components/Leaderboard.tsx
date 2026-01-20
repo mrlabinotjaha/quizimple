@@ -9,9 +9,10 @@ interface LeaderboardProps {
   onLeave: () => void;
   hideResults?: boolean;
   isHost?: boolean;
+  myAnswers?: Record<number, number[]>;
 }
 
-export function Leaderboard({ data, onLeave, hideResults = false, isHost = false }: LeaderboardProps) {
+export function Leaderboard({ data, onLeave, hideResults = false, isHost = false, myAnswers = {} }: LeaderboardProps) {
   const [showQuestions, setShowQuestions] = useState(false);
 
   // Host always sees full results, players see based on hideResults setting
@@ -221,24 +222,39 @@ export function Leaderboard({ data, onLeave, hideResults = false, isHost = false
                           <p className="font-medium text-sm flex-1">{q.text}</p>
                         </div>
                         <div className="grid gap-1.5 ml-6">
-                          {q.options.map((option, optIndex) => (
-                            <div
-                              key={optIndex}
-                              className={`flex items-center gap-1.5 p-1.5 rounded text-xs ${
-                                q.correct.includes(optIndex)
-                                  ? 'bg-green-500/10 border border-green-500/30 text-green-700 dark:text-green-400'
-                                  : 'bg-[#1E1E2E]/5 dark:bg-white/5'
-                              }`}
-                            >
-                              <span className="font-medium w-4">
-                                {String.fromCharCode(65 + optIndex)}.
-                              </span>
-                              <span className="flex-1">{option}</span>
-                              {q.correct.includes(optIndex) && (
-                                <CheckCircle className="w-3 h-3 text-green-500" />
-                              )}
-                            </div>
-                          ))}
+                          {q.options.map((option, optIndex) => {
+                            const isCorrect = q.correct.includes(optIndex);
+                            const myAnswer = myAnswers[index] || [];
+                            const iSelected = myAnswer.includes(optIndex);
+                            const isWrongSelection = iSelected && !isCorrect;
+
+                            return (
+                              <div
+                                key={optIndex}
+                                className={`flex items-center gap-1.5 p-1.5 rounded text-xs ${
+                                  isCorrect
+                                    ? 'bg-green-500/10 border border-green-500/30 text-green-700 dark:text-green-400'
+                                    : isWrongSelection
+                                    ? 'bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-400'
+                                    : 'bg-[#1E1E2E]/5 dark:bg-white/5'
+                                }`}
+                              >
+                                <span className="font-medium w-4">
+                                  {String.fromCharCode(65 + optIndex)}.
+                                </span>
+                                <span className="flex-1">{option}</span>
+                                {isCorrect && (
+                                  <CheckCircle className="w-3 h-3 text-green-500" />
+                                )}
+                                {isWrongSelection && (
+                                  <XCircle className="w-3 h-3 text-red-500" />
+                                )}
+                                {iSelected && !isWrongSelection && !isCorrect && (
+                                  <span className="text-xs text-muted-foreground">You</span>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     ))}

@@ -43,6 +43,7 @@ export function Room({ roomCode, onLeave, guestName }: RoomProps) {
   const [funMode, setFunMode] = useState(false);
   const [error, setError] = useState('');
   const [allAnswered, setAllAnswered] = useState(false);
+  const [myAnswers, setMyAnswers] = useState<Record<number, number[]>>({});
 
   const handleMessage = useCallback((message: WSMessage) => {
     switch (message.event) {
@@ -186,6 +187,7 @@ export function Room({ roomCode, onLeave, guestName }: RoomProps) {
   const handleSubmitAnswer = (answers: number[]) => {
     sendMessage('submit_answer', { question_index: questionIndex, answers });
     setHasSubmitted(true);
+    setMyAnswers(prev => ({ ...prev, [questionIndex]: answers }));
   };
 
   const handleNextQuestion = () => {
@@ -230,7 +232,7 @@ export function Room({ roomCode, onLeave, guestName }: RoomProps) {
   }
 
   if (state === 'finished' && leaderboard) {
-    return <Leaderboard data={leaderboard} onLeave={onLeave} hideResults={hideResults} isHost={isHost} />;
+    return <Leaderboard data={leaderboard} onLeave={onLeave} hideResults={hideResults} isHost={isHost} myAnswers={myAnswers} />;
   }
 
   if (state === 'lobby') {
