@@ -15,6 +15,7 @@ interface HostControlsProps {
   totalPlayers: number;
   onNextQuestion: () => void;
   onEndQuiz: () => void;
+  hideQuestions?: boolean;
 }
 
 export function HostControls({
@@ -25,6 +26,7 @@ export function HostControls({
   totalPlayers,
   onNextQuestion,
   onEndQuiz,
+  hideQuestions = false,
 }: HostControlsProps) {
   const [timeLeft, setTimeLeft] = useState(question.time_limit);
   const [hasAdvanced, setHasAdvanced] = useState(false);
@@ -93,26 +95,35 @@ export function HostControls({
             <CardTitle className="text-lg">Current Question</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-lg mb-4">{question.text}</p>
-            <div className="grid grid-cols-2 gap-2">
-              {question.options.map((option, index) => {
-                const isCorrect = question.correct?.includes(index);
-                return (
-                  <div
-                    key={index}
-                    className={cn(
-                      "p-2 rounded border text-sm flex items-center gap-2",
-                      isCorrect
-                        ? "border-green-500 bg-green-500/10 text-green-400"
-                        : "border-border"
-                    )}
-                  >
-                    {isCorrect && <Check className="w-4 h-4 flex-shrink-0" />}
-                    <span>{String.fromCharCode(65 + index)}. {option}</span>
-                  </div>
-                );
-              })}
-            </div>
+            {hideQuestions ? (
+              <div className="text-center py-8">
+                <p className="text-muted-foreground">Questions hidden</p>
+                <p className="text-sm text-muted-foreground mt-1">Play from another device or incognito</p>
+              </div>
+            ) : (
+              <>
+                <p className="text-lg mb-4">{question.text}</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {question.options.map((option, index) => {
+                    const isCorrect = question.correct?.includes(index);
+                    return (
+                      <div
+                        key={index}
+                        className={cn(
+                          "p-2 rounded border text-sm flex items-center gap-2",
+                          isCorrect
+                            ? "border-green-500 bg-green-500/10 text-green-400"
+                            : "border-border"
+                        )}
+                      >
+                        {isCorrect && <Check className="w-4 h-4 flex-shrink-0" />}
+                        <span>{String.fromCharCode(65 + index)}. {option}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 

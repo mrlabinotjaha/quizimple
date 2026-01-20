@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { LeaderboardData } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Trophy, Medal, Award, Home, EyeOff, CheckCircle, XCircle, BookOpen, ChevronDown, ChevronUp, Clock } from 'lucide-react';
+import { Trophy, Medal, Award, Home, EyeOff, CheckCircle, XCircle, BookOpen, Clock } from 'lucide-react';
 
 interface LeaderboardProps {
   data: LeaderboardData;
@@ -13,7 +13,6 @@ interface LeaderboardProps {
 }
 
 export function Leaderboard({ data, onLeave, hideResults = false, isHost = false, myAnswers = {} }: LeaderboardProps) {
-  const [showQuestions, setShowQuestions] = useState(false);
 
   // Host always sees full results, players see based on hideResults setting
   const showDetailedResults = isHost || !hideResults;
@@ -185,82 +184,76 @@ export function Leaderboard({ data, onLeave, hideResults = false, isHost = false
           </Button>
         </div>
 
-        {/* Review Questions Sidebar */}
+        {/* Review Questions Sidebar - Always visible */}
         {questions && questions.length > 0 && (
           <div className="lg:w-96 lg:flex-shrink-0 lg:h-screen lg:sticky lg:top-0 lg:py-4 lg:-my-4">
             <Card className="h-full flex flex-col">
-              <CardHeader
-                className="cursor-pointer select-none pb-3 flex-shrink-0"
-                onClick={() => setShowQuestions(!showQuestions)}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <BookOpen className="w-4 h-4 text-primary" />
-                    <CardTitle className="text-base">Review Questions</CardTitle>
-                  </div>
-                  {showQuestions ? (
-                    <ChevronUp className="w-4 h-4 text-muted-foreground" />
-                  ) : (
-                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                  )}
+              <CardHeader className="pb-3 flex-shrink-0">
+                <div className="flex items-center gap-2">
+                  <BookOpen className="w-4 h-4 text-primary" />
+                  <CardTitle className="text-base">Review Questions</CardTitle>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {showQuestions ? 'Click to hide' : 'Click to see answers'}
+                  Learn from your answers
                 </p>
               </CardHeader>
-              {showQuestions && (
-                <CardContent className="space-y-3 flex-1 overflow-y-auto">
-                    {questions.map((q, index) => (
-                      <div
-                        key={index}
-                        className="p-3 rounded-lg bg-[#1E1E2E]/5 dark:bg-white/5 border border-[#1E1E2E]/10 dark:border-white/10"
-                      >
-                        <div className="flex items-start gap-2 mb-2">
-                          <span className="px-1.5 py-0.5 bg-primary/10 text-primary text-xs font-bold rounded">
-                            Q{index + 1}
-                          </span>
-                          <p className="font-medium text-sm flex-1">{q.text}</p>
-                        </div>
-                        <div className="grid gap-1.5 ml-6">
-                          {q.options.map((option, optIndex) => {
-                            const isCorrect = q.correct.includes(optIndex);
-                            const myAnswer = myAnswers[index] || [];
-                            const iSelected = myAnswer.includes(optIndex);
-                            const isWrongSelection = iSelected && !isCorrect;
+              <CardContent className="space-y-3 flex-1 overflow-y-auto">
+                {questions.map((q, index) => (
+                  <div
+                    key={index}
+                    className="p-3 rounded-lg bg-[#1E1E2E]/5 dark:bg-white/5 border border-[#1E1E2E]/10 dark:border-white/10"
+                  >
+                    <div className="flex items-start gap-2 mb-2">
+                      <span className="px-1.5 py-0.5 bg-primary/10 text-primary text-xs font-bold rounded">
+                        Q{index + 1}
+                      </span>
+                      <p className="font-medium text-sm flex-1">{q.text}</p>
+                    </div>
+                    <div className="grid gap-1.5 ml-6">
+                      {q.options.map((option, optIndex) => {
+                        const isCorrect = q.correct.includes(optIndex);
+                        const myAnswer = myAnswers[index] || [];
+                        const iSelected = myAnswer.includes(optIndex);
+                        const isWrongSelection = iSelected && !isCorrect;
 
-                            return (
-                              <div
-                                key={optIndex}
-                                className={`flex items-center gap-1.5 p-1.5 rounded text-xs ${
-                                  isCorrect
-                                    ? 'bg-green-500/10 border border-green-500/30 text-green-700 dark:text-green-400'
-                                    : isWrongSelection
-                                    ? 'bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-400'
-                                    : 'bg-[#1E1E2E]/5 dark:bg-white/5'
-                                }`}
-                              >
-                                <span className="font-medium w-4">
-                                  {String.fromCharCode(65 + optIndex)}.
-                                </span>
-                                <span className="flex-1">{option}</span>
-                                {isCorrect && (
-                                  <CheckCircle className="w-3 h-3 text-green-500" />
-                                )}
-                                {isWrongSelection && (
-                                  <XCircle className="w-3 h-3 text-red-500" />
-                                )}
-                                {iSelected && !isWrongSelection && !isCorrect && (
-                                  <span className="text-xs text-muted-foreground">You</span>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    ))}
-                  </CardContent>
-                )}
-              </Card>
+                        return (
+                          <div
+                            key={optIndex}
+                            className={`flex items-center gap-1.5 p-1.5 rounded text-xs ${
+                              isCorrect
+                                ? 'bg-green-500/10 border border-green-500/30 text-green-700 dark:text-green-400'
+                                : isWrongSelection
+                                ? 'bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-400'
+                                : 'bg-[#1E1E2E]/5 dark:bg-white/5'
+                            }`}
+                          >
+                            <span className="font-medium w-4">
+                              {String.fromCharCode(65 + optIndex)}.
+                            </span>
+                            <span className="flex-1">{option}</span>
+                            {iSelected && (
+                              <span className={`text-xs px-1.5 py-0.5 rounded ${
+                                isCorrect
+                                  ? 'bg-green-500/20 text-green-600 dark:text-green-400'
+                                  : 'bg-red-500/20 text-red-600 dark:text-red-400'
+                              }`}>
+                                Chosen
+                              </span>
+                            )}
+                            {isCorrect && (
+                              <CheckCircle className="w-3 h-3 text-green-500" />
+                            )}
+                            {isWrongSelection && (
+                              <XCircle className="w-3 h-3 text-red-500" />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
           </div>
         )}
       </div>

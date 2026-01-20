@@ -44,6 +44,7 @@ export function Room({ roomCode, onLeave, guestName }: RoomProps) {
   const [error, setError] = useState('');
   const [allAnswered, setAllAnswered] = useState(false);
   const [myAnswers, setMyAnswers] = useState<Record<number, number[]>>({});
+  const [hideQuestionsForHost, setHideQuestionsForHost] = useState(false);
 
   const handleMessage = useCallback((message: WSMessage) => {
     switch (message.event) {
@@ -180,7 +181,8 @@ export function Room({ roomCode, onLeave, guestName }: RoomProps) {
     };
   }, [isHost, state, sendMessage]);
 
-  const handleStart = () => {
+  const handleStart = (hideQuestions: boolean) => {
+    setHideQuestionsForHost(hideQuestions);
     sendMessage('start_quiz');
   };
 
@@ -259,6 +261,7 @@ export function Room({ roomCode, onLeave, guestName }: RoomProps) {
           totalPlayers={players.length}
           onNextQuestion={handleNextQuestion}
           onEndQuiz={handleEndQuiz}
+          hideQuestions={hideQuestionsForHost}
         />
       );
     }

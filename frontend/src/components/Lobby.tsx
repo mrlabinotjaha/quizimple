@@ -3,20 +3,21 @@ import { Player } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Users, Play, LogOut, Copy, Link, Check } from 'lucide-react';
+import { Users, Play, LogOut, Copy, Link, Check, EyeOff } from 'lucide-react';
 
 interface LobbyProps {
   roomCode: string;
   players: Player[];
   isHost: boolean;
   quizName: string;
-  onStart: () => void;
+  onStart: (hideQuestionsForHost: boolean) => void;
   onLeave: () => void;
 }
 
 export function Lobby({ roomCode, players, isHost, quizName, onStart, onLeave }: LobbyProps) {
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [hideQuestionsForHost, setHideQuestionsForHost] = useState(false);
 
   const getRoomUrl = () => {
     return `${window.location.origin}/room/${roomCode}`;
@@ -98,10 +99,35 @@ export function Lobby({ roomCode, players, isHost, quizName, onStart, onLeave }:
         <div className="space-y-3">
           {isHost ? (
             <>
+              {/* Hide questions toggle for host */}
+              <div
+                className="flex items-center justify-between p-3 rounded-lg border border-border cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => setHideQuestionsForHost(!hideQuestionsForHost)}
+              >
+                <div className="flex items-center gap-2">
+                  <EyeOff className={`w-4 h-4 ${hideQuestionsForHost ? 'text-primary' : 'text-muted-foreground'}`} />
+                  <div>
+                    <p className="text-sm font-medium">Hide questions from me</p>
+                    <p className="text-xs text-muted-foreground">Play from another device</p>
+                  </div>
+                </div>
+                <div
+                  className={`w-10 h-6 rounded-full transition-colors ${
+                    hideQuestionsForHost ? 'bg-primary' : 'bg-muted'
+                  }`}
+                >
+                  <div
+                    className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform mt-1 ${
+                      hideQuestionsForHost ? 'translate-x-5' : 'translate-x-1'
+                    }`}
+                  />
+                </div>
+              </div>
+
               <Button
                 className="w-full"
                 size="lg"
-                onClick={onStart}
+                onClick={() => onStart(hideQuestionsForHost)}
                 disabled={players.length === 0}
               >
                 <Play className="w-5 h-5 mr-2" />
