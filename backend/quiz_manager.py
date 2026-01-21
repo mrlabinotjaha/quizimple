@@ -191,3 +191,30 @@ def delete_quiz(quiz_id: str) -> bool:
         return True
     finally:
         db.close()
+
+
+def update_all_questions_settings(quiz_id: str, time_limit: int = None, points: int = None) -> int:
+    """Update time_limit and/or points for all questions in a quiz."""
+    db = SessionLocal()
+    try:
+        quiz = db.query(QuizDB).filter(QuizDB.id == quiz_id).first()
+        if not quiz:
+            return 0
+
+        questions = quiz.questions or []
+        if not questions:
+            return 0
+
+        updated_count = 0
+        for q in questions:
+            if time_limit is not None:
+                q['time_limit'] = time_limit
+            if points is not None:
+                q['points'] = points
+            updated_count += 1
+
+        quiz.questions = questions
+        db.commit()
+        return updated_count
+    finally:
+        db.close()

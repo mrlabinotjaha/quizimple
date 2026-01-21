@@ -1,5 +1,6 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends, HTTPException, status, Request
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 import json
@@ -22,7 +23,8 @@ from user_manager import (
 import httpx
 from quiz_manager import (
     create_quiz, get_quiz, get_user_quizzes, add_question,
-    import_questions, delete_question, delete_quiz, update_quiz_settings
+    import_questions, delete_question, delete_quiz, update_quiz_settings,
+    update_all_questions_settings
 )
 from ai_service import generate_questions
 from room_manager import (
@@ -347,6 +349,30 @@ async def delete_quiz_question(
     if not delete_question(quiz_id, question_index):
         raise HTTPException(status_code=400, detail="Failed to delete question")
     return {"message": "Question deleted"}
+
+
+class BulkQuestionUpdate(BaseModel):
+    time_limit: Optional[int] = None
+    points: Optional[int] = None
+
+
+@app.patch("/api/quizzes/{quiz_id}/questions/bulk")
+async def bulk_update_questions(
+    quiz_id: str,
+    data: BulkQuestionUpdate,
+    current_user: dict = Depends(get_current_user)
+):
+    quiz = get_quiz(quiz_id)
+    if not quiz:
+        raise HTTPException(status_code=404, detail="Quiz not found")
+    if quiz.owner_id != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    if data.time_limit is None and data.points is None:
+        raise HTTPException(status_code=400, detail="No updates provided")
+
+    updated_count = update_all_questions_settings(quiz_id, data.time_limit, data.points)
+    return {"message": f"Updated {updated_count} questions", "count": updated_count}
 
 
 # Room endpoints

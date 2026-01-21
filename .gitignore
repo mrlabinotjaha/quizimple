@@ -44,3 +44,4 @@ Thumbs.db
 
 # Misc
 *.local
+backend/quiz.db

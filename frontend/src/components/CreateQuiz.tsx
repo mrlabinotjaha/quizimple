@@ -384,6 +384,52 @@ export function CreateQuiz({ quiz: existingQuiz, onBack, onQuizCreated, onHost }
     }
   };
 
+  const handleBulkTimeLimit = async (time: number) => {
+    setQuizTimeLimit(time);
+    if (!quiz || quiz.questions.length === 0) return;
+
+    try {
+      const response = await fetch(`${API_URL}/quizzes/${quiz.id}/questions/bulk`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ time_limit: time }),
+      });
+
+      if (response.ok) {
+        fetchQuiz(quiz.id);
+        showToast(`Updated all questions to ${time}s`, 'success');
+      }
+    } catch (err) {
+      console.error('Failed to update questions:', err);
+    }
+  };
+
+  const handleBulkPoints = async (pts: number) => {
+    setQuizPoints(pts);
+    if (!quiz || quiz.questions.length === 0) return;
+
+    try {
+      const response = await fetch(`${API_URL}/quizzes/${quiz.id}/questions/bulk`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ points: pts }),
+      });
+
+      if (response.ok) {
+        fetchQuiz(quiz.id);
+        showToast(`Updated all questions to ${pts} points`, 'success');
+      }
+    } catch (err) {
+      console.error('Failed to update questions:', err);
+    }
+  };
+
   // Create Quiz Form
   if (!quiz) {
     return (
@@ -907,9 +953,8 @@ export function CreateQuiz({ quiz: existingQuiz, onBack, onQuizCreated, onHost }
                 <div className="p-4">
                   <div className="flex items-center gap-2 mb-3">
                     <Clock className="w-4 h-4 text-[#1E1E2E]/40 dark:text-white/40" />
-                    <p className="font-medium text-[#1E1E2E] dark:text-white text-sm">Question Defaults</p>
+                    <p className="font-medium text-[#1E1E2E] dark:text-white text-sm">Question Settings</p>
                   </div>
-                  <p className="text-xs text-[#1E1E2E]/40 dark:text-white/40 mb-3">For new questions</p>
 
                   {/* Time Limit */}
                   <div className="mb-3">
@@ -919,7 +964,7 @@ export function CreateQuiz({ quiz: existingQuiz, onBack, onQuizCreated, onHost }
                         <button
                           key={time}
                           type="button"
-                          onClick={() => setQuizTimeLimit(time)}
+                          onClick={() => handleBulkTimeLimit(time)}
                           className={`px-2 py-1 text-xs font-medium rounded-lg transition-colors ${
                             quizTimeLimit === time
                               ? 'bg-[#FF6B4A] text-white'
@@ -932,7 +977,11 @@ export function CreateQuiz({ quiz: existingQuiz, onBack, onQuizCreated, onHost }
                       <input
                         type="number"
                         value={quizTimeLimit}
-                        onChange={(e) => setQuizTimeLimit(Math.max(5, Math.min(300, parseInt(e.target.value) || 30)))}
+                        onChange={(e) => {
+                          const val = Math.max(5, Math.min(300, parseInt(e.target.value) || 30));
+                          setQuizTimeLimit(val);
+                        }}
+                        onBlur={() => handleBulkTimeLimit(quizTimeLimit)}
                         min={5}
                         max={300}
                         className="w-14 px-2 py-1 text-xs bg-[#FFFBF7] dark:bg-[#0D0D0F] border border-[#1E1E2E]/10 dark:border-white/10 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#FF6B4A]/30 text-[#1E1E2E] dark:text-white text-center"
@@ -948,7 +997,7 @@ export function CreateQuiz({ quiz: existingQuiz, onBack, onQuizCreated, onHost }
                         <button
                           key={pts}
                           type="button"
-                          onClick={() => setQuizPoints(pts)}
+                          onClick={() => handleBulkPoints(pts)}
                           className={`px-2 py-1 text-xs font-medium rounded-lg transition-colors ${
                             quizPoints === pts
                               ? 'bg-[#FF6B4A] text-white'
@@ -961,7 +1010,11 @@ export function CreateQuiz({ quiz: existingQuiz, onBack, onQuizCreated, onHost }
                       <input
                         type="number"
                         value={quizPoints}
-                        onChange={(e) => setQuizPoints(Math.max(10, Math.min(1000, parseInt(e.target.value) || 100)))}
+                        onChange={(e) => {
+                          const val = Math.max(10, Math.min(1000, parseInt(e.target.value) || 100));
+                          setQuizPoints(val);
+                        }}
+                        onBlur={() => handleBulkPoints(quizPoints)}
                         min={10}
                         max={1000}
                         step={10}
@@ -969,6 +1022,12 @@ export function CreateQuiz({ quiz: existingQuiz, onBack, onQuizCreated, onHost }
                       />
                     </div>
                   </div>
+
+                  {quiz.questions.length > 0 && (
+                    <p className="text-xs text-[#1E1E2E]/40 dark:text-white/40 mt-3">
+                      Changes apply to all {quiz.questions.length} questions
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
