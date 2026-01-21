@@ -205,16 +205,18 @@ def update_all_questions_settings(quiz_id: str, time_limit: int = None, points: 
         if not questions:
             return 0
 
-        updated_count = 0
+        # Create new list to ensure SQLAlchemy detects the change
+        updated_questions = []
         for q in questions:
+            updated_q = dict(q)  # Create a copy of each question
             if time_limit is not None:
-                q['time_limit'] = time_limit
+                updated_q['time_limit'] = time_limit
             if points is not None:
-                q['points'] = points
-            updated_count += 1
+                updated_q['points'] = points
+            updated_questions.append(updated_q)
 
-        quiz.questions = questions
+        quiz.questions = updated_questions  # Assign new list to trigger change detection
         db.commit()
-        return updated_count
+        return len(updated_questions)
     finally:
         db.close()
