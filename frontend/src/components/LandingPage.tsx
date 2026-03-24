@@ -575,7 +575,7 @@ export function LandingPage({ onGetStarted, onLogin, onTemplateMarket, onJoinQui
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
             {/* Free Plan */}
             <div className="bg-white dark:bg-[#1A1A1F] rounded-3xl p-8 border border-[#1E1E2E]/10 dark:border-white/10 hover:border-[#1E1E2E]/20 dark:hover:border-white/20 transition-all hover:shadow-xl dark:hover:shadow-black/20">
               <div className="mb-8">
@@ -622,7 +622,7 @@ export function LandingPage({ onGetStarted, onLogin, onTemplateMarket, onJoinQui
                 <p className="text-white/50 dark:text-[#1E1E2E]/50 text-sm">For educators & trainers</p>
               </div>
               <div className="mb-8">
-                <span className="text-5xl font-bold" style={{ fontFamily: "'Instrument Serif', serif" }}>$19</span>
+                <span className="text-5xl font-bold" style={{ fontFamily: "'Instrument Serif', serif" }}>$15</span>
                 <span className="text-white/50 dark:text-[#1E1E2E]/50">/month</span>
               </div>
               <button
@@ -650,36 +650,6 @@ export function LandingPage({ onGetStarted, onLogin, onTemplateMarket, onJoinQui
               </div>
             </div>
 
-            {/* Enterprise Plan */}
-            <div className="bg-white dark:bg-[#1A1A1F] rounded-3xl p-8 border border-[#1E1E2E]/10 dark:border-white/10 hover:border-[#1E1E2E]/20 dark:hover:border-white/20 transition-all hover:shadow-xl dark:hover:shadow-black/20">
-              <div className="mb-8">
-                <h3 className="text-xl font-semibold text-[#1E1E2E] dark:text-white mb-2">Enterprise</h3>
-                <p className="text-[#1E1E2E]/50 dark:text-white/50 text-sm">For organizations</p>
-              </div>
-              <div className="mb-8">
-                <span className="text-5xl font-bold text-[#1E1E2E] dark:text-white" style={{ fontFamily: "'Instrument Serif', serif" }}>Custom</span>
-              </div>
-              <button className="w-full py-4 bg-[#1E1E2E] dark:bg-white hover:bg-[#2E2E3E] dark:hover:bg-white/90 text-white dark:text-[#1E1E2E] font-semibold rounded-2xl transition-colors mb-8">
-                Contact Sales
-              </button>
-              <div className="space-y-4">
-                {[
-                  'Everything in Pro',
-                  'Unlimited participants',
-                  'Custom branding',
-                  'SSO integration',
-                  'Dedicated support',
-                  'SLA guarantee'
-                ].map((feature, i) => (
-                  <div key={i} className="flex items-center gap-3">
-                    <div className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center">
-                      <Check className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-                    </div>
-                    <span className="text-[#1E1E2E]/70 dark:text-white/70">{feature}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
           </div>
         </div>
       </section>
