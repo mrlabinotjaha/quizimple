@@ -73,17 +73,19 @@ export function QuizQuestion({
     };
   }, [funMode, hasSubmitted, questionIndex]);
 
-  useEffect(() => {
-    if (hasSubmitted) return;
+  const hasSubmittedRef = useRef(hasSubmitted);
+  hasSubmittedRef.current = hasSubmitted;
 
+  const selectedAnswersRef = useRef(selectedAnswers);
+  selectedAnswersRef.current = selectedAnswers;
+
+  useEffect(() => {
     const timer = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
-          if (selectedAnswers.length > 0) {
-            onSubmit(selectedAnswers);
-          } else {
-            onSubmit([]);
+          if (!hasSubmittedRef.current) {
+            onSubmit(selectedAnswersRef.current.length > 0 ? selectedAnswersRef.current : []);
           }
           return 0;
         }
@@ -92,7 +94,7 @@ export function QuizQuestion({
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [hasSubmitted, questionIndex]);
+  }, [questionIndex]);
 
   const toggleAnswer = (index: number) => {
     if (hasSubmitted) return;
