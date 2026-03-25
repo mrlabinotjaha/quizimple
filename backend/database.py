@@ -1,5 +1,5 @@
 import os
-from sqlalchemy import create_engine, Column, String, Integer, Float, Boolean, Text, DateTime, JSON, ForeignKey
+from sqlalchemy import create_engine, Column, String, Integer, Float, Boolean, Text, DateTime, JSON, ForeignKey, inspect, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.mutable import MutableList
 from sqlalchemy.orm import sessionmaker, relationship
@@ -108,9 +108,22 @@ class TemplateRatingDB(Base):
     template = relationship("TemplateDB", back_populates="ratings")
 
 
+def _migrate_db():
+    """Add missing columns to existing tables."""
+    inspector = inspect(engine)
+    if "templates" in inspector.get_table_names():
+        columns = [col["name"] for col in inspector.get_columns("templates")]
+        with engine.begin() as conn:
+            if "is_private" not in columns:
+                conn.execute(text("ALTER TABLE templates ADD COLUMN is_private BOOLEAN DEFAULT FALSE"))
+            if "passcode" not in columns:
+                conn.execute(text("ALTER TABLE templates ADD COLUMN passcode VARCHAR"))
+
+
 def init_db():
     """Initialize database tables."""
     Base.metadata.create_all(bind=engine)
+    _migrate_db()
 
 
 def get_db():

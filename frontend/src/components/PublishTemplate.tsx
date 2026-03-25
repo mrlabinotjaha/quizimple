@@ -96,8 +96,12 @@ export function PublishTemplate({ quiz, token, onClose, onPublished }: PublishTe
       });
 
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.detail || 'Failed to publish template');
+        let message = 'Failed to publish template';
+        try {
+          const data = await res.json();
+          message = data.detail || message;
+        } catch {}
+        throw new Error(message);
       }
 
       onPublished();
