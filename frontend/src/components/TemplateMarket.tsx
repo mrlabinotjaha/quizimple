@@ -21,8 +21,7 @@ import {
   ChevronDown,
   ChevronUp,
   CheckCircle,
-  Lock,
-  Globe
+  Lock
 } from 'lucide-react';
 import { QuizTemplate, TemplateCategory, Question } from '../types';
 import { API_URL } from '../config';
