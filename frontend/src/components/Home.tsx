@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
-import { Quiz } from '@/types';
+import { Quiz, QuizTemplate } from '@/types';
 import { PublishTemplate } from './PublishTemplate';
 import { ThemeToggle } from './ThemeToggle';
 import { ConfirmModal } from './ConfirmModal';
@@ -20,7 +20,9 @@ import {
   Clock,
   User,
   Settings,
-  ChevronDown
+  ChevronDown,
+  Lock,
+  Globe
 } from 'lucide-react';
 
 interface HomeProps {
@@ -41,9 +43,11 @@ export function Home({ onEnterRoom, onTemplateMarket, onViewQuizDetail, onCreate
   const [deletingQuiz, setDeletingQuiz] = useState<Quiz | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [userTemplates, setUserTemplates] = useState<QuizTemplate[]>([]);
 
   useEffect(() => {
     fetchQuizzes();
+    fetchUserTemplates();
   }, []);
 
   const fetchQuizzes = async () => {
@@ -61,6 +65,25 @@ export function Home({ onEnterRoom, onTemplateMarket, onViewQuizDetail, onCreate
       setIsLoading(false);
     }
   };
+
+  const fetchUserTemplates = async () => {
+    try {
+      const response = await fetch(`${API_URL}/templates/mine`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.ok) {
+        setUserTemplates(await response.json());
+      }
+    } catch (err) {
+      console.error('Failed to fetch user templates:', err);
+    }
+  };
+
+  // Map quiz_id -> template for quick lookup
+  const templateByQuizId = userTemplates.reduce<Record<string, QuizTemplate>>((acc, t) => {
+    acc[t.quiz_id] = t;
+    return acc;
+  }, {});
 
   const handleCreateRoom = async (quizId: string) => {
     try {
@@ -255,6 +278,19 @@ export function Home({ onEnterRoom, onTemplateMarket, onViewQuizDetail, onCreate
                             Hidden Results
                           </span>
                         )}
+                        {templateByQuizId[quiz.id] && (
+                          templateByQuizId[quiz.id].is_private ? (
+                            <span className="flex items-center gap-1 px-2 py-0.5 bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 text-xs font-medium rounded-full">
+                              <Lock className="w-3 h-3" />
+                              Private
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1 px-2 py-0.5 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-medium rounded-full">
+                              <Globe className="w-3 h-3" />
+                              Public
+                            </span>
+                          )
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -314,6 +350,7 @@ export function Home({ onEnterRoom, onTemplateMarket, onViewQuizDetail, onCreate
           onClose={() => setPublishingQuiz(null)}
           onPublished={() => {
             setPublishingQuiz(null);
+            fetchUserTemplates();
             showToast('Template published successfully!', 'success');
           }}
         />
