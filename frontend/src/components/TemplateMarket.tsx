@@ -21,7 +21,8 @@ import {
   ChevronDown,
   ChevronUp,
   CheckCircle,
-  Lock
+  Lock,
+  Globe
 } from 'lucide-react';
 import { QuizTemplate, TemplateCategory, Question } from '../types';
 import { API_URL } from '../config';
@@ -65,6 +66,10 @@ export function TemplateMarket({ token, onBack, onUseTemplate, onLogin }: Templa
   const [passcodePrompt, setPasscodePrompt] = useState<string | null>(null);
   const [passcodeInput, setPasscodeInput] = useState('');
   const [passcodeError, setPasscodeError] = useState('');
+  const [unlockPrompt, setUnlockPrompt] = useState<QuizTemplate | null>(null);
+  const [unlockInput, setUnlockInput] = useState('');
+  const [unlockError, setUnlockError] = useState('');
+  const [unlockedTemplates, setUnlockedTemplates] = useState<Map<string, string>>(new Map());
 
   // Close modal on ESC key
   useEffect(() => {
@@ -161,18 +166,56 @@ export function TemplateMarket({ token, onBack, onUseTemplate, onLogin }: Templa
     }
   };
 
+  const handleTemplateClick = (template: QuizTemplate) => {
+    if (template.is_private && !unlockedTemplates.has(template.id)) {
+      setUnlockPrompt(template);
+      setUnlockInput('');
+      setUnlockError('');
+    } else {
+      setSelectedTemplate(template);
+    }
+  };
+
+  const handleUnlockTemplate = async () => {
+    if (!unlockPrompt || !unlockInput.trim()) return;
+
+    try {
+      // Verify passcode by attempting a dry-run use (we'll check via a dedicated verify call)
+      const res = await fetch(`${API_URL}/templates/${unlockPrompt.id}/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ passcode: unlockInput.trim() })
+      });
+
+      if (res.ok) {
+        setUnlockedTemplates(prev => new Map(prev).set(unlockPrompt.id, unlockInput.trim()));
+        setSelectedTemplate(unlockPrompt);
+        setUnlockPrompt(null);
+      } else {
+        setUnlockError('Incorrect passcode');
+      }
+    } catch {
+      setUnlockError('Failed to verify passcode');
+    }
+  };
+
   const handleUseTemplate = async (template: QuizTemplate, passcode?: string) => {
     if (!token) {
       onLogin();
       return;
     }
 
-    // Prompt for passcode if private and not yet provided
+    // Use stored passcode if already unlocked, otherwise prompt
     if (template.is_private && !passcode) {
-      setPasscodePrompt(template.id);
-      setPasscodeInput('');
-      setPasscodeError('');
-      return;
+      const storedPasscode = unlockedTemplates.get(template.id);
+      if (storedPasscode) {
+        passcode = storedPasscode;
+      } else {
+        setPasscodePrompt(template.id);
+        setPasscodeInput('');
+        setPasscodeError('');
+        return;
+      }
     }
 
     setUsingTemplate(template.id);
@@ -353,16 +396,28 @@ export function TemplateMarket({ token, onBack, onUseTemplate, onLogin }: Templa
                   <div
                     key={template.id}
                     className="bg-white dark:bg-[#1A1A1F] rounded-2xl p-6 border border-[#1E1E2E]/5 dark:border-white/10 hover:shadow-xl dark:hover:shadow-black/30 transition-all cursor-pointer group"
-                    onClick={() => setSelectedTemplate(template)}
+                    onClick={() => handleTemplateClick(template)}
                   >
                     <div className="flex items-start justify-between mb-4">
                       <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${config?.color || 'from-gray-400 to-gray-500'} flex items-center justify-center`}>
                         <Icon className="w-6 h-6 text-white" />
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Star className="w-4 h-4 text-amber-400" fill="#fbbf24" />
-                        <span className="text-sm font-medium text-[#1E1E2E] dark:text-white">{template.rating.toFixed(1)}</span>
-                        <span className="text-xs text-[#1E1E2E]/40 dark:text-white/40">({template.ratings_count})</span>
+                      <div className="flex items-center gap-2">
+                        {template.is_private ? (
+                          <span className="flex items-center gap-1 px-2 py-0.5 bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-medium rounded-full">
+                            <Lock className="w-3 h-3" />
+                            Private
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1 px-2 py-0.5 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-medium rounded-full">
+                            <Globe className="w-3 h-3" />
+                            Public
+                          </span>
+                        )}
+                        <div className="flex items-center gap-1">
+                          <Star className="w-4 h-4 text-amber-400" fill="#fbbf24" />
+                          <span className="text-sm font-medium text-[#1E1E2E] dark:text-white">{template.rating.toFixed(1)}</span>
+                        </div>
                       </div>
                     </div>
                     <h3 className="font-semibold text-[#1E1E2E] dark:text-white mb-1 group-hover:text-[#FF6B4A] transition-colors">
@@ -397,15 +452,28 @@ export function TemplateMarket({ token, onBack, onUseTemplate, onLogin }: Templa
                   <div
                     key={template.id}
                     className="bg-white dark:bg-[#1A1A1F] rounded-2xl p-6 border border-[#1E1E2E]/5 dark:border-white/10 hover:shadow-lg dark:hover:shadow-black/30 transition-all cursor-pointer group"
-                    onClick={() => setSelectedTemplate(template)}
+                    onClick={() => handleTemplateClick(template)}
                   >
                     <div className="flex items-start justify-between mb-4">
                       <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${config?.color || 'from-gray-400 to-gray-500'} flex items-center justify-center`}>
                         <Icon className="w-5 h-5 text-white" />
                       </div>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium bg-gradient-to-r ${config?.color || 'from-gray-400 to-gray-500'} text-white`}>
-                        {config?.label || 'Other'}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        {template.is_private ? (
+                          <span className="flex items-center gap-1 px-2 py-0.5 bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-medium rounded-full">
+                            <Lock className="w-3 h-3" />
+                            Private
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1 px-2 py-0.5 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-medium rounded-full">
+                            <Globe className="w-3 h-3" />
+                            Public
+                          </span>
+                        )}
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium bg-gradient-to-r ${config?.color || 'from-gray-400 to-gray-500'} text-white`}>
+                          {config?.label || 'Other'}
+                        </span>
+                      </div>
                     </div>
                     <h3 className="font-semibold text-[#1E1E2E] dark:text-white mb-1 group-hover:text-[#FF6B4A] transition-colors">
                       {template.name}
@@ -674,6 +742,55 @@ export function TemplateMarket({ token, onBack, onUseTemplate, onLogin }: Templa
                 className="flex-1 py-3 bg-gradient-to-r from-[#FF6B4A] to-[#FF8F6B] text-white font-medium rounded-xl hover:shadow-lg hover:shadow-[#FF6B4A]/30 transition-all disabled:opacity-50"
               >
                 {usingTemplate === selectedTemplate.id ? 'Verifying...' : 'Submit'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Unlock Private Template Modal */}
+      {unlockPrompt && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setUnlockPrompt(null)} />
+          <div className="relative bg-white dark:bg-[#1A1A1F] rounded-2xl max-w-sm w-full shadow-2xl p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-amber-100 dark:bg-amber-500/20 rounded-xl flex items-center justify-center">
+                <Lock className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-[#1E1E2E] dark:text-white">{unlockPrompt.name}</h3>
+                <p className="text-xs text-[#1E1E2E]/50 dark:text-white/50">Enter passcode to view this template</p>
+              </div>
+            </div>
+            <input
+              type="text"
+              value={unlockInput}
+              onChange={(e) => { setUnlockInput(e.target.value); setUnlockError(''); }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && unlockInput.trim()) {
+                  handleUnlockTemplate();
+                }
+              }}
+              className="w-full px-4 py-3 bg-[#FFFBF7] dark:bg-[#0D0D0F] border border-[#1E1E2E]/10 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 text-[#1E1E2E] dark:text-white placeholder:text-[#1E1E2E]/40 dark:placeholder:text-white/40 mb-2"
+              placeholder="Enter passcode"
+              autoFocus
+            />
+            {unlockError && (
+              <p className="text-sm text-red-500 mb-2">{unlockError}</p>
+            )}
+            <div className="flex gap-2 mt-3">
+              <button
+                onClick={() => setUnlockPrompt(null)}
+                className="flex-1 py-3 bg-[#1E1E2E]/5 dark:bg-white/10 text-[#1E1E2E] dark:text-white font-medium rounded-xl hover:bg-[#1E1E2E]/10 dark:hover:bg-white/20 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUnlockTemplate}
+                disabled={!unlockInput.trim()}
+                className="flex-1 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-white font-medium rounded-xl hover:shadow-lg hover:shadow-amber-500/30 transition-all disabled:opacity-50"
+              >
+                Unlock
               </button>
             </div>
           </div>

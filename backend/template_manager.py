@@ -118,11 +118,6 @@ def get_all_templates(
         if category:
             query = query.filter(TemplateDB.category == category.value)
 
-        # Exclude private templates from public listing
-        query = query.filter(
-            (TemplateDB.is_private == False) | (TemplateDB.is_private == None)
-        )
-
         templates = query.all()
 
         # Convert to QuizTemplate objects
@@ -142,7 +137,7 @@ def get_all_templates(
                 ratings_count=t.ratings_count,
                 created_at=t.created_at.isoformat(),
                 tags=t.tags or [],
-                is_private=False
+                is_private=t.is_private or False
             ))
 
         # Search in name, description, and tags
@@ -345,9 +340,7 @@ def get_featured_templates(limit: int = 6) -> list[QuizTemplate]:
     """Get featured templates (high rating + many uses)."""
     db = SessionLocal()
     try:
-        templates = db.query(TemplateDB).filter(
-            (TemplateDB.is_private == False) | (TemplateDB.is_private == None)
-        ).all()
+        templates = db.query(TemplateDB).all()
         result = []
         for t in templates:
             result.append(QuizTemplate(
@@ -364,7 +357,7 @@ def get_featured_templates(limit: int = 6) -> list[QuizTemplate]:
                 ratings_count=t.ratings_count,
                 created_at=t.created_at.isoformat(),
                 tags=t.tags or [],
-                is_private=False
+                is_private=t.is_private or False
             ))
 
         # Score = rating * log(uses + 1)

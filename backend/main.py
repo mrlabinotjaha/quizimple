@@ -542,6 +542,23 @@ async def publish_quiz_as_template(
     return template
 
 
+class TemplatePasscodeVerify(BaseModel):
+    passcode: str
+
+
+@app.post("/api/templates/{template_id}/verify")
+async def verify_template_passcode_endpoint(template_id: str, data: TemplatePasscodeVerify):
+    """Verify a passcode for a private template."""
+    template = get_template(template_id)
+    if not template:
+        raise HTTPException(status_code=404, detail="Template not found")
+    if not template.is_private:
+        return {"valid": True}
+    if not verify_template_passcode(template_id, data.passcode):
+        raise HTTPException(status_code=403, detail="Incorrect passcode")
+    return {"valid": True}
+
+
 class TemplateUseRequest(BaseModel):
     passcode: Optional[str] = None
 
