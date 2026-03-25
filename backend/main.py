@@ -12,8 +12,8 @@ from datetime import datetime
 from models import (
     UserCreate, UserLogin, Token, QuizCreate, QuizUpdate, QuestionCreate,
     QuestionsImport, Quiz, Question, AIGenerateRequest, TemplateCreate,
-    TemplateCategory, TemplateRating, GoogleAuthRequest, UserUpdate,
-    PasswordChange, AccountDelete, User
+    TemplateCategory, TemplateRating, TemplateUpdate, GoogleAuthRequest,
+    UserUpdate, PasswordChange, AccountDelete, User
 )
 from auth import create_access_token, get_current_user, decode_token
 from user_manager import (
@@ -39,7 +39,7 @@ from session_manager import (
 from template_manager import (
     publish_template, get_template, get_all_templates, get_user_templates,
     increment_uses, rate_template, delete_template, get_featured_templates,
-    get_categories_with_counts, verify_template_passcode
+    get_categories_with_counts, verify_template_passcode, update_template
 )
 from database import init_db
 
@@ -606,6 +606,28 @@ async def rate_template_endpoint(
     if not template:
         raise HTTPException(status_code=404, detail="Template not found or invalid rating")
     return template
+
+
+@app.patch("/api/templates/{template_id}")
+async def update_template_endpoint(
+    template_id: str,
+    data: TemplateUpdate,
+    current_user: dict = Depends(get_current_user)
+):
+    """Update a template (only by author)."""
+    updated = update_template(
+        template_id=template_id,
+        user_id=current_user["id"],
+        name=data.name,
+        description=data.description,
+        category=data.category,
+        tags=data.tags,
+        is_private=data.is_private,
+        passcode=data.passcode
+    )
+    if not updated:
+        raise HTTPException(status_code=404, detail="Template not found or not authorized")
+    return updated
 
 
 @app.delete("/api/templates/{template_id}")

@@ -347,11 +347,12 @@ export function Home({ onEnterRoom, onTemplateMarket, onViewQuizDetail, onCreate
         <PublishTemplate
           quiz={publishingQuiz}
           token={token}
+          existingTemplate={templateByQuizId[publishingQuiz.id] || null}
           onClose={() => setPublishingQuiz(null)}
           onPublished={() => {
             setPublishingQuiz(null);
             fetchUserTemplates();
-            showToast('Template published successfully!', 'success');
+            showToast(templateByQuizId[publishingQuiz.id] ? 'Template updated!' : 'Template published!', 'success');
           }}
         />
       )}

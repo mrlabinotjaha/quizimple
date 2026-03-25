@@ -10,7 +10,7 @@ import {
   Lock,
   Globe
 } from 'lucide-react';
-import { Quiz, TemplateCategory } from '../types';
+import { Quiz, QuizTemplate, TemplateCategory } from '../types';
 import { API_URL } from '../config';
 
 interface PublishTemplateProps {
@@ -18,6 +18,7 @@ interface PublishTemplateProps {
   token: string;
   onClose: () => void;
   onPublished: () => void;
+  existingTemplate?: QuizTemplate | null;
 }
 
 const categories: { value: TemplateCategory; label: string }[] = [
@@ -32,13 +33,14 @@ const categories: { value: TemplateCategory; label: string }[] = [
   { value: 'other', label: 'Other' }
 ];
 
-export function PublishTemplate({ quiz, token, onClose, onPublished }: PublishTemplateProps) {
-  const [name, setName] = useState(quiz.name);
-  const [description, setDescription] = useState('');
-  const [category, setCategory] = useState<TemplateCategory>('other');
+export function PublishTemplate({ quiz, token, onClose, onPublished, existingTemplate }: PublishTemplateProps) {
+  const isEditing = !!existingTemplate;
+  const [name, setName] = useState(existingTemplate?.name || quiz.name);
+  const [description, setDescription] = useState(existingTemplate?.description || '');
+  const [category, setCategory] = useState<TemplateCategory>(existingTemplate?.category || 'other');
   const [tagInput, setTagInput] = useState('');
-  const [tags, setTags] = useState<string[]>([]);
-  const [isPrivate, setIsPrivate] = useState(false);
+  const [tags, setTags] = useState<string[]>(existingTemplate?.tags || []);
+  const [isPrivate, setIsPrivate] = useState(existingTemplate?.is_private || false);
   const [passcode, setPasscode] = useState('');
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState('');
@@ -71,7 +73,7 @@ export function PublishTemplate({ quiz, token, onClose, onPublished }: PublishTe
       setError('Quiz must have at least 1 question');
       return;
     }
-    if (isPrivate && !passcode.trim()) {
+    if (isPrivate && !passcode.trim() && !isEditing) {
       setError('Passcode is required for private templates');
       return;
     }
@@ -79,24 +81,31 @@ export function PublishTemplate({ quiz, token, onClose, onPublished }: PublishTe
     setPublishing(true);
 
     try {
-      const res = await fetch(`${API_URL}/quizzes/${quiz.id}/publish`, {
-        method: 'POST',
+      const url = isEditing
+        ? `${API_URL}/templates/${existingTemplate!.id}`
+        : `${API_URL}/quizzes/${quiz.id}/publish`;
+      const method = isEditing ? 'PATCH' : 'POST';
+
+      const body: Record<string, unknown> = {
+        name: name.trim(),
+        description: description.trim(),
+        category,
+        tags,
+        is_private: isPrivate,
+        passcode: isPrivate ? passcode.trim() || null : null
+      };
+
+      const res = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({
-          name: name.trim(),
-          description: description.trim(),
-          category,
-          tags,
-          is_private: isPrivate,
-          passcode: isPrivate ? passcode.trim() : null
-        })
+        body: JSON.stringify(body)
       });
 
       if (!res.ok) {
-        let message = 'Failed to publish template';
+        let message = isEditing ? 'Failed to update template' : 'Failed to publish template';
         try {
           const data = await res.json();
           message = data.detail || message;
@@ -130,9 +139,11 @@ export function PublishTemplate({ quiz, token, onClose, onPublished }: PublishTe
             </div>
             <div>
               <h2 className="text-xl font-semibold text-[#1E1E2E] dark:text-white" style={{ fontFamily: "'Instrument Serif', serif" }}>
-                Publish to Template Market
+                {isEditing ? 'Edit Template' : 'Publish to Template Market'}
               </h2>
-              <p className="text-sm text-[#1E1E2E]/50 dark:text-white/50">Share your quiz with the community</p>
+              <p className="text-sm text-[#1E1E2E]/50 dark:text-white/50">
+                {isEditing ? 'Update your template settings' : 'Share your quiz with the community'}
+              </p>
             </div>
           </div>
 
@@ -270,7 +281,7 @@ export function PublishTemplate({ quiz, token, onClose, onPublished }: PublishTe
                     value={passcode}
                     onChange={(e) => setPasscode(e.target.value)}
                     className="w-full px-4 py-3 bg-[#FFFBF7] dark:bg-[#0D0D0F] border border-[#1E1E2E]/10 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 text-[#1E1E2E] dark:text-white placeholder:text-[#1E1E2E]/40 dark:placeholder:text-white/40"
-                    placeholder="Set a passcode for access"
+                    placeholder={isEditing ? "Leave blank to keep current passcode" : "Set a passcode for access"}
                   />
                   <p className="text-xs text-[#1E1E2E]/40 dark:text-white/40 mt-1.5">
                     Share this passcode with people you want to access the template
@@ -300,12 +311,12 @@ export function PublishTemplate({ quiz, token, onClose, onPublished }: PublishTe
               {publishing ? (
                 <>
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Publishing...
+                  {isEditing ? 'Updating...' : 'Publishing...'}
                 </>
               ) : (
                 <>
                   <Share2 className="w-5 h-5" />
-                  Publish Template
+                  {isEditing ? 'Update Template' : 'Publish Template'}
                 </>
               )}
             </button>

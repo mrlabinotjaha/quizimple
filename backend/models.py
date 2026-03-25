@@ -232,5 +232,14 @@ class TemplateCreate(BaseModel):
     passcode: Optional[str] = None
 
 
+class TemplateUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    category: Optional[TemplateCategory] = None
+    tags: Optional[list[str]] = None
+    is_private: Optional[bool] = None
+    passcode: Optional[str] = None
+
+
 class TemplateRating(BaseModel):
     rating: int  # 1-5

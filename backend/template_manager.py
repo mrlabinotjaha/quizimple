@@ -266,6 +266,63 @@ def rate_template(template_id: str, user_id: str, rating: int) -> QuizTemplate |
         db.close()
 
 
+def update_template(
+    template_id: str,
+    user_id: str,
+    name: str | None = None,
+    description: str | None = None,
+    category: TemplateCategory | None = None,
+    tags: list[str] | None = None,
+    is_private: bool | None = None,
+    passcode: str | None = None
+) -> QuizTemplate | None:
+    """Update a template (only by author)."""
+    db = SessionLocal()
+    try:
+        template = db.query(TemplateDB).filter(TemplateDB.id == template_id).first()
+        if not template or template.author_id != user_id:
+            return None
+
+        if name is not None:
+            template.name = name
+        if description is not None:
+            template.description = description
+        if category is not None:
+            template.category = category.value
+        if tags is not None:
+            template.tags = tags
+        if is_private is not None:
+            template.is_private = is_private
+            if not is_private:
+                template.passcode = None
+            elif passcode is not None:
+                template.passcode = passcode
+        elif passcode is not None and template.is_private:
+            template.passcode = passcode
+
+        db.commit()
+        db.refresh(template)
+
+        return QuizTemplate(
+            id=template.id,
+            quiz_id=template.quiz_id,
+            name=template.name,
+            description=template.description,
+            category=TemplateCategory(template.category),
+            author_id=template.author_id,
+            author_name=template.author_name,
+            questions_count=template.questions_count,
+            uses_count=template.uses_count,
+            rating=template.rating,
+            ratings_count=template.ratings_count,
+            created_at=template.created_at.isoformat(),
+            tags=template.tags or [],
+            is_private=template.is_private or False
+        )
+    finally:
+        db.close()
+
+
 def delete_template(template_id: str, user_id: str) -> bool:
     """Delete a template (only by author)."""
     db = SessionLocal()
