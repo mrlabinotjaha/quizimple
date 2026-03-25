@@ -20,7 +20,8 @@ import {
   ChevronRight,
   ChevronDown,
   ChevronUp,
-  CheckCircle
+  CheckCircle,
+  Lock
 } from 'lucide-react';
 import { QuizTemplate, TemplateCategory, Question } from '../types';
 import { API_URL } from '../config';
@@ -61,6 +62,9 @@ export function TemplateMarket({ token, onBack, onUseTemplate, onLogin }: Templa
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [expandedQuestions, setExpandedQuestions] = useState<Set<number>>(new Set());
   const [usingTemplate, setUsingTemplate] = useState<string | null>(null);
+  const [passcodePrompt, setPasscodePrompt] = useState<string | null>(null);
+  const [passcodeInput, setPasscodeInput] = useState('');
+  const [passcodeError, setPasscodeError] = useState('');
 
   // Close modal on ESC key
   useEffect(() => {
@@ -157,9 +161,17 @@ export function TemplateMarket({ token, onBack, onUseTemplate, onLogin }: Templa
     }
   };
 
-  const handleUseTemplate = async (template: QuizTemplate) => {
+  const handleUseTemplate = async (template: QuizTemplate, passcode?: string) => {
     if (!token) {
       onLogin();
+      return;
+    }
+
+    // Prompt for passcode if private and not yet provided
+    if (template.is_private && !passcode) {
+      setPasscodePrompt(template.id);
+      setPasscodeInput('');
+      setPasscodeError('');
       return;
     }
 
@@ -168,14 +180,25 @@ export function TemplateMarket({ token, onBack, onUseTemplate, onLogin }: Templa
       const res = await fetch(`${API_URL}/templates/${template.id}/use`, {
         method: 'POST',
         headers: {
+          'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
-        }
+        },
+        body: JSON.stringify({ passcode: passcode || null })
       });
 
-      if (res.ok) {
-        const quiz = await res.json();
-        onUseTemplate(quiz);
+      if (!res.ok) {
+        const data = await res.json();
+        if (res.status === 403 && template.is_private) {
+          setPasscodeError(data.detail || 'Incorrect passcode');
+          setPasscodePrompt(template.id);
+          return;
+        }
+        throw new Error(data.detail);
       }
+
+      setPasscodePrompt(null);
+      const quiz = await res.json();
+      onUseTemplate(quiz);
     } catch (error) {
       console.error('Failed to use template:', error);
     } finally {
@@ -594,10 +617,63 @@ export function TemplateMarket({ token, onBack, onUseTemplate, onLogin }: Templa
                   </>
                 ) : (
                   <>
-                    <Download className="w-5 h-5" />
-                    Use This Template
+                    {selectedTemplate.is_private ? <Lock className="w-5 h-5" /> : <Download className="w-5 h-5" />}
+                    {selectedTemplate.is_private ? 'Enter Passcode to Use' : 'Use This Template'}
                   </>
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Passcode Prompt Modal */}
+      {passcodePrompt && selectedTemplate && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setPasscodePrompt(null)} />
+          <div className="relative bg-white dark:bg-[#1A1A1F] rounded-2xl max-w-sm w-full shadow-2xl p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-amber-100 dark:bg-amber-500/20 rounded-xl flex items-center justify-center">
+                <Lock className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-[#1E1E2E] dark:text-white">Private Template</h3>
+                <p className="text-xs text-[#1E1E2E]/50 dark:text-white/50">Enter the passcode to use this template</p>
+              </div>
+            </div>
+            <input
+              type="text"
+              value={passcodeInput}
+              onChange={(e) => { setPasscodeInput(e.target.value); setPasscodeError(''); }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && passcodeInput.trim()) {
+                  handleUseTemplate(selectedTemplate, passcodeInput.trim());
+                }
+              }}
+              className="w-full px-4 py-3 bg-[#FFFBF7] dark:bg-[#0D0D0F] border border-[#1E1E2E]/10 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 text-[#1E1E2E] dark:text-white placeholder:text-[#1E1E2E]/40 dark:placeholder:text-white/40 mb-2"
+              placeholder="Enter passcode"
+              autoFocus
+            />
+            {passcodeError && (
+              <p className="text-sm text-red-500 mb-2">{passcodeError}</p>
+            )}
+            <div className="flex gap-2 mt-3">
+              <button
+                onClick={() => setPasscodePrompt(null)}
+                className="flex-1 py-3 bg-[#1E1E2E]/5 dark:bg-white/10 text-[#1E1E2E] dark:text-white font-medium rounded-xl hover:bg-[#1E1E2E]/10 dark:hover:bg-white/20 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  if (passcodeInput.trim()) {
+                    handleUseTemplate(selectedTemplate, passcodeInput.trim());
+                  }
+                }}
+                disabled={!passcodeInput.trim() || usingTemplate === selectedTemplate.id}
+                className="flex-1 py-3 bg-gradient-to-r from-[#FF6B4A] to-[#FF8F6B] text-white font-medium rounded-xl hover:shadow-lg hover:shadow-[#FF6B4A]/30 transition-all disabled:opacity-50"
+              >
+                {usingTemplate === selectedTemplate.id ? 'Verifying...' : 'Submit'}
               </button>
             </div>
           </div>

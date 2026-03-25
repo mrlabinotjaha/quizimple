@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { ChevronRight, Square, Users, Clock, Check } from 'lucide-react';
+import { ChevronRight, Square, Users, Clock, Check, Pause, Play } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface HostControlsProps {
@@ -15,6 +15,10 @@ interface HostControlsProps {
   totalPlayers: number;
   onNextQuestion: () => void;
   onEndQuiz: () => void;
+  onPause: (timeRemaining: number) => void;
+  onResume: () => void;
+  isPaused: boolean;
+  pausedTimeRemaining: number;
   hideQuestions?: boolean;
 }
 
@@ -26,6 +30,10 @@ export function HostControls({
   totalPlayers,
   onNextQuestion,
   onEndQuiz,
+  onPause,
+  onResume,
+  isPaused,
+  pausedTimeRemaining,
   hideQuestions = false,
 }: HostControlsProps) {
   const [timeLeft, setTimeLeft] = useState(question.time_limit);
@@ -40,9 +48,16 @@ export function HostControls({
     setHasAdvanced(false);
   }, [question, questionIndex]);
 
+  // Restore time when resumed
+  useEffect(() => {
+    if (!isPaused && pausedTimeRemaining > 0) {
+      setTimeLeft(Math.ceil(pausedTimeRemaining));
+    }
+  }, [isPaused, pausedTimeRemaining]);
+
   // Countdown timer - auto advance when time runs out
   useEffect(() => {
-    if (hasAdvanced) return;
+    if (hasAdvanced || isPaused) return;
 
     const timer = setInterval(() => {
       setTimeLeft((prev) => {
@@ -62,7 +77,7 @@ export function HostControls({
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [questionIndex, isLastQuestion, onNextQuestion, onEndQuiz, hasAdvanced]);
+  }, [questionIndex, isLastQuestion, onNextQuestion, onEndQuiz, hasAdvanced, isPaused]);
 
   return (
     <div className="min-h-screen p-4 md:p-8">
@@ -148,14 +163,49 @@ export function HostControls({
           </CardContent>
         </Card>
 
+        {/* Paused Banner */}
+        {isPaused && (
+          <Card className="border-amber-500/50 bg-amber-500/10">
+            <CardContent className="pt-6 text-center">
+              <Pause className="w-8 h-8 text-amber-500 mx-auto mb-2" />
+              <p className="font-semibold text-amber-500">Quiz Paused</p>
+              <p className="text-sm text-muted-foreground">Players' timers are frozen</p>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Controls */}
         <div className="space-y-3">
+          <Button
+            className="w-full"
+            size="lg"
+            variant={isPaused ? 'default' : 'outline'}
+            onClick={() => {
+              if (isPaused) {
+                onResume();
+              } else {
+                onPause(timeLeft);
+              }
+            }}
+          >
+            {isPaused ? (
+              <>
+                <Play className="w-5 h-5 mr-2" />
+                Resume Quiz
+              </>
+            ) : (
+              <>
+                <Pause className="w-5 h-5 mr-2" />
+                Pause Quiz
+              </>
+            )}
+          </Button>
           {isLastQuestion ? (
-            <Button className="w-full" size="lg" onClick={onEndQuiz}>
+            <Button className="w-full" size="lg" onClick={onEndQuiz} disabled={isPaused}>
               End Quiz & Show Leaderboard
             </Button>
           ) : (
-            <Button className="w-full" size="lg" onClick={onNextQuestion}>
+            <Button className="w-full" size="lg" onClick={onNextQuestion} disabled={isPaused}>
               <ChevronRight className="w-5 h-5 mr-2" />
               Skip to Next Question
             </Button>

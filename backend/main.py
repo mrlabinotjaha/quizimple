@@ -30,7 +30,8 @@ from ai_service import generate_questions
 from room_manager import (
     create_room, get_room, join_room, leave_room, start_quiz as start_room_quiz,
     submit_answer, calculate_scores, next_question, end_quiz,
-    get_leaderboard, get_players_list, record_tab_switch
+    get_leaderboard, get_players_list, record_tab_switch,
+    pause_quiz, resume_quiz
 )
 from session_manager import (
     save_session, get_session, get_quiz_sessions, get_quiz_analytics, get_user_sessions
@@ -38,7 +39,7 @@ from session_manager import (
 from template_manager import (
     publish_template, get_template, get_all_templates, get_user_templates,
     increment_uses, rate_template, delete_template, get_featured_templates,
-    get_categories_with_counts
+    get_categories_with_counts, verify_template_passcode
 )
 from database import init_db
 
@@ -534,17 +535,30 @@ async def publish_quiz_as_template(
         author_id=current_user["id"],
         author_name=current_user["username"],
         questions_count=len(quiz.questions),
-        tags=data.tags
+        tags=data.tags,
+        is_private=data.is_private,
+        passcode=data.passcode
     )
     return template
 
 
+class TemplateUseRequest(BaseModel):
+    passcode: Optional[str] = None
+
+
 @app.post("/api/templates/{template_id}/use")
-async def use_template(template_id: str, current_user: dict = Depends(get_current_user)):
+async def use_template(template_id: str, data: TemplateUseRequest = TemplateUseRequest(), current_user: dict = Depends(get_current_user)):
     """Create a copy of a template as a new quiz."""
     template = get_template(template_id)
     if not template:
         raise HTTPException(status_code=404, detail="Template not found")
+
+    # Check passcode for private templates
+    if template.is_private:
+        if not data.passcode:
+            raise HTTPException(status_code=403, detail="Passcode required")
+        if not verify_template_passcode(template_id, data.passcode):
+            raise HTTPException(status_code=403, detail="Incorrect passcode")
 
     # Get the original quiz
     original_quiz = get_quiz(template.quiz_id)
@@ -714,6 +728,22 @@ async def websocket_endpoint(
             elif event == "tab_switch":
                 # Record tab switch for cheat detection
                 record_tab_switch(room_code, user_id)
+
+            elif event == "pause_quiz":
+                time_remaining = data.get("data", {}).get("time_remaining", 0)
+                if pause_quiz(room_code, user_id, time_remaining):
+                    await manager.broadcast_to_room(room_code, {
+                        "event": "quiz_paused",
+                        "data": {"time_remaining": time_remaining}
+                    })
+
+            elif event == "resume_quiz":
+                time_remaining = resume_quiz(room_code, user_id)
+                if time_remaining >= 0:
+                    await manager.broadcast_to_room(room_code, {
+                        "event": "quiz_resumed",
+                        "data": {"time_remaining": time_remaining}
+                    })
 
             elif event == "show_results":
                 scores = calculate_scores(room_code)

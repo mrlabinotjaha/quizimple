@@ -149,6 +149,33 @@ def next_question(room_code: str, host_id: str) -> bool:
     return True
 
 
+def pause_quiz(room_code: str, host_id: str, time_remaining: float) -> bool:
+    room = rooms_db.get(room_code)
+    if not room or room.host_id != host_id:
+        return False
+    if room.state != RoomState.PLAYING or room.paused:
+        return False
+
+    room.paused = True
+    room.time_remaining_when_paused = time_remaining
+    return True
+
+
+def resume_quiz(room_code: str, host_id: str) -> float:
+    """Resume the quiz. Returns the time remaining to restore timers."""
+    room = rooms_db.get(room_code)
+    if not room or room.host_id != host_id:
+        return -1
+    if room.state != RoomState.PLAYING or not room.paused:
+        return -1
+
+    room.paused = False
+    room.question_start_time = time.time()
+    remaining = room.time_remaining_when_paused
+    room.time_remaining_when_paused = 0
+    return remaining
+
+
 def end_quiz(room_code: str, host_id: str) -> bool:
     room = rooms_db.get(room_code)
     if not room or room.host_id != host_id:

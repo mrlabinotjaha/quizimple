@@ -173,4 +173,5 @@ export interface QuizTemplate {
   ratings_count: number;
   created_at: string;
   tags: string[];
+  is_private: boolean;
 }

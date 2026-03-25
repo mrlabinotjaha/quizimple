@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Check, Clock, Star, Users } from 'lucide-react';
+import { Check, Clock, Star, Users, Pause } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface QuizQuestionProps {
@@ -16,6 +16,8 @@ interface QuizQuestionProps {
   answersReceived?: number;
   totalPlayers?: number;
   funMode?: boolean;
+  isPaused?: boolean;
+  pausedTimeRemaining?: number;
 }
 
 // Fun Mode effects - one at a time, stays permanent per question
@@ -30,6 +32,8 @@ export function QuizQuestion({
   answersReceived = 0,
   totalPlayers = 0,
   funMode = false,
+  isPaused = false,
+  pausedTimeRemaining = 0,
 }: QuizQuestionProps) {
   const [selectedAnswers, setSelectedAnswers] = useState<number[]>([]);
   const [timeLeft, setTimeLeft] = useState(question.time_limit);
@@ -79,7 +83,16 @@ export function QuizQuestion({
   const selectedAnswersRef = useRef(selectedAnswers);
   selectedAnswersRef.current = selectedAnswers;
 
+  // Restore time when resumed
   useEffect(() => {
+    if (!isPaused && pausedTimeRemaining > 0) {
+      setTimeLeft(Math.ceil(pausedTimeRemaining));
+    }
+  }, [isPaused, pausedTimeRemaining]);
+
+  useEffect(() => {
+    if (isPaused) return;
+
     const timer = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
@@ -94,7 +107,7 @@ export function QuizQuestion({
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [questionIndex]);
+  }, [questionIndex, isPaused]);
 
   const toggleAnswer = (index: number) => {
     if (hasSubmitted) return;
@@ -170,6 +183,17 @@ export function QuizQuestion({
           }
           .animate-fun-shake { animation: fun-shake 0.5s ease-in-out infinite; }
         `}</style>
+      )}
+
+      {/* Paused Overlay */}
+      {isPaused && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center">
+          <div className="text-center">
+            <Pause className="w-16 h-16 text-amber-400 mx-auto mb-4" />
+            <h2 className="text-3xl font-bold text-white mb-2">Quiz Paused</h2>
+            <p className="text-white/60">The host has paused the quiz. Hang tight!</p>
+          </div>
+        </div>
       )}
 
       <div

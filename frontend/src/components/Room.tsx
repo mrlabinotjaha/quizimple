@@ -45,6 +45,8 @@ export function Room({ roomCode, onLeave, guestName }: RoomProps) {
   const [allAnswered, setAllAnswered] = useState(false);
   const [myAnswers, setMyAnswers] = useState<Record<number, number[]>>({});
   const [hideQuestionsForHost, setHideQuestionsForHost] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [pausedTimeRemaining, setPausedTimeRemaining] = useState(0);
 
   const handleMessage = useCallback((message: WSMessage) => {
     switch (message.event) {
@@ -80,7 +82,18 @@ export function Room({ roomCode, onLeave, guestName }: RoomProps) {
         setAnswersReceived(0);
         setResults(null);
         setAllAnswered(false);
+        setIsPaused(false);
         setState('playing');
+        break;
+
+      case 'quiz_paused':
+        setIsPaused(true);
+        setPausedTimeRemaining(message.data.time_remaining as number);
+        break;
+
+      case 'quiz_resumed':
+        setIsPaused(false);
+        setPausedTimeRemaining(message.data.time_remaining as number);
         break;
 
       case 'answer_received':
@@ -196,6 +209,14 @@ export function Room({ roomCode, onLeave, guestName }: RoomProps) {
     sendMessage('next_question');
   };
 
+  const handlePauseQuiz = (timeRemaining: number) => {
+    sendMessage('pause_quiz', { time_remaining: timeRemaining });
+  };
+
+  const handleResumeQuiz = () => {
+    sendMessage('resume_quiz');
+  };
+
   const handleEndQuiz = () => {
     sendMessage('end_quiz');
   };
@@ -261,6 +282,10 @@ export function Room({ roomCode, onLeave, guestName }: RoomProps) {
           totalPlayers={players.length}
           onNextQuestion={handleNextQuestion}
           onEndQuiz={handleEndQuiz}
+          onPause={handlePauseQuiz}
+          onResume={handleResumeQuiz}
+          isPaused={isPaused}
+          pausedTimeRemaining={pausedTimeRemaining}
           hideQuestions={hideQuestionsForHost}
         />
       );
@@ -333,6 +358,8 @@ export function Room({ roomCode, onLeave, guestName }: RoomProps) {
         answersReceived={answersReceived}
         totalPlayers={players.length}
         funMode={funMode}
+        isPaused={isPaused}
+        pausedTimeRemaining={pausedTimeRemaining}
       />
     );
   }

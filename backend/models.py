@@ -120,6 +120,8 @@ class Room(BaseModel):
     current_question: int = 0
     answers_received: int = 0
     question_start_time: float = 0.0  # timestamp when current question started
+    paused: bool = False
+    time_remaining_when_paused: float = 0.0  # seconds left on timer when paused
 
 
 # WebSocket message models
@@ -218,6 +220,7 @@ class QuizTemplate(BaseModel):
     ratings_count: int = 0
     created_at: str  # ISO datetime
     tags: list[str] = []
+    is_private: bool = False
 
 
 class TemplateCreate(BaseModel):
@@ -225,6 +228,8 @@ class TemplateCreate(BaseModel):
     description: str
     category: TemplateCategory
     tags: list[str] = []
+    is_private: bool = False
+    passcode: Optional[str] = None
 
 
 class TemplateRating(BaseModel):

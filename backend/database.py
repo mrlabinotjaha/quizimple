@@ -88,6 +88,8 @@ class TemplateDB(Base):
     ratings_count = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
     tags = Column(JSON, default=list)
+    is_private = Column(Boolean, default=False)
+    passcode = Column(String, nullable=True)
 
     # Relationships
     author = relationship("UserDB", back_populates="templates")

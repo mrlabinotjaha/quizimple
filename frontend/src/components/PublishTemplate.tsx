@@ -6,7 +6,9 @@ import {
   FileText,
   Folder,
   Plus,
-  Sparkles
+  Sparkles,
+  Lock,
+  Globe
 } from 'lucide-react';
 import { Quiz, TemplateCategory } from '../types';
 import { API_URL } from '../config';
@@ -36,6 +38,8 @@ export function PublishTemplate({ quiz, token, onClose, onPublished }: PublishTe
   const [category, setCategory] = useState<TemplateCategory>('other');
   const [tagInput, setTagInput] = useState('');
   const [tags, setTags] = useState<string[]>([]);
+  const [isPrivate, setIsPrivate] = useState(false);
+  const [passcode, setPasscode] = useState('');
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState('');
 
@@ -67,6 +71,10 @@ export function PublishTemplate({ quiz, token, onClose, onPublished }: PublishTe
       setError('Quiz must have at least 1 question');
       return;
     }
+    if (isPrivate && !passcode.trim()) {
+      setError('Passcode is required for private templates');
+      return;
+    }
 
     setPublishing(true);
 
@@ -81,7 +89,9 @@ export function PublishTemplate({ quiz, token, onClose, onPublished }: PublishTe
           name: name.trim(),
           description: description.trim(),
           category,
-          tags
+          tags,
+          is_private: isPrivate,
+          passcode: isPrivate ? passcode.trim() : null
         })
       });
 
@@ -214,6 +224,53 @@ export function PublishTemplate({ quiz, token, onClose, onPublished }: PublishTe
                       </button>
                     </span>
                   ))}
+                </div>
+              )}
+            </div>
+
+            {/* Visibility */}
+            <div>
+              <label className="block text-sm font-medium text-[#1E1E2E] dark:text-white mb-3">
+                Visibility
+              </label>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsPrivate(false)}
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border-2 font-medium text-sm transition-all ${
+                    !isPrivate
+                      ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+                      : 'border-[#1E1E2E]/10 dark:border-white/10 text-[#1E1E2E]/50 dark:text-white/50 hover:border-[#1E1E2E]/20 dark:hover:border-white/20'
+                  }`}
+                >
+                  <Globe className="w-4 h-4" />
+                  Public
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsPrivate(true)}
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border-2 font-medium text-sm transition-all ${
+                    isPrivate
+                      ? 'border-amber-500 bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400'
+                      : 'border-[#1E1E2E]/10 dark:border-white/10 text-[#1E1E2E]/50 dark:text-white/50 hover:border-[#1E1E2E]/20 dark:hover:border-white/20'
+                  }`}
+                >
+                  <Lock className="w-4 h-4" />
+                  Private
+                </button>
+              </div>
+              {isPrivate && (
+                <div className="mt-3">
+                  <input
+                    type="text"
+                    value={passcode}
+                    onChange={(e) => setPasscode(e.target.value)}
+                    className="w-full px-4 py-3 bg-[#FFFBF7] dark:bg-[#0D0D0F] border border-[#1E1E2E]/10 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 text-[#1E1E2E] dark:text-white placeholder:text-[#1E1E2E]/40 dark:placeholder:text-white/40"
+                    placeholder="Set a passcode for access"
+                  />
+                  <p className="text-xs text-[#1E1E2E]/40 dark:text-white/40 mt-1.5">
+                    Share this passcode with people you want to access the template
+                  </p>
                 </div>
               )}
             </div>

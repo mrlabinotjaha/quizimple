@@ -13,7 +13,9 @@ def publish_template(
     author_id: str,
     author_name: str,
     questions_count: int,
-    tags: list[str]
+    tags: list[str],
+    is_private: bool = False,
+    passcode: str | None = None
 ) -> QuizTemplate:
     """Publish a quiz as a template to the marketplace."""
     db = SessionLocal()
@@ -33,7 +35,9 @@ def publish_template(
             rating=0.0,
             ratings_count=0,
             created_at=datetime.utcnow(),
-            tags=tags
+            tags=tags,
+            is_private=is_private,
+            passcode=passcode if is_private else None
         )
         db.add(db_template)
         db.commit()
@@ -51,7 +55,8 @@ def publish_template(
             rating=0.0,
             ratings_count=0,
             created_at=db_template.created_at.isoformat(),
-            tags=tags
+            tags=tags,
+            is_private=is_private
         )
     finally:
         db.close()
@@ -77,8 +82,23 @@ def get_template(template_id: str) -> QuizTemplate | None:
             rating=template.rating,
             ratings_count=template.ratings_count,
             created_at=template.created_at.isoformat(),
-            tags=template.tags or []
+            tags=template.tags or [],
+            is_private=template.is_private or False
         )
+    finally:
+        db.close()
+
+
+def verify_template_passcode(template_id: str, passcode: str) -> bool:
+    """Verify a passcode for a private template."""
+    db = SessionLocal()
+    try:
+        template = db.query(TemplateDB).filter(TemplateDB.id == template_id).first()
+        if not template:
+            return False
+        if not template.is_private:
+            return True
+        return template.passcode == passcode
     finally:
         db.close()
 
@@ -98,6 +118,11 @@ def get_all_templates(
         if category:
             query = query.filter(TemplateDB.category == category.value)
 
+        # Exclude private templates from public listing
+        query = query.filter(
+            (TemplateDB.is_private == False) | (TemplateDB.is_private == None)
+        )
+
         templates = query.all()
 
         # Convert to QuizTemplate objects
@@ -116,7 +141,8 @@ def get_all_templates(
                 rating=t.rating,
                 ratings_count=t.ratings_count,
                 created_at=t.created_at.isoformat(),
-                tags=t.tags or []
+                tags=t.tags or [],
+                is_private=False
             ))
 
         # Search in name, description, and tags
@@ -162,7 +188,8 @@ def get_user_templates(user_id: str) -> list[QuizTemplate]:
                 rating=t.rating,
                 ratings_count=t.ratings_count,
                 created_at=t.created_at.isoformat(),
-                tags=t.tags or []
+                tags=t.tags or [],
+                is_private=t.is_private or False
             ))
         return result
     finally:
@@ -232,7 +259,8 @@ def rate_template(template_id: str, user_id: str, rating: int) -> QuizTemplate |
             rating=template.rating,
             ratings_count=template.ratings_count,
             created_at=template.created_at.isoformat(),
-            tags=template.tags or []
+            tags=template.tags or [],
+            is_private=template.is_private or False
         )
     finally:
         db.close()
@@ -260,7 +288,9 @@ def get_featured_templates(limit: int = 6) -> list[QuizTemplate]:
     """Get featured templates (high rating + many uses)."""
     db = SessionLocal()
     try:
-        templates = db.query(TemplateDB).all()
+        templates = db.query(TemplateDB).filter(
+            (TemplateDB.is_private == False) | (TemplateDB.is_private == None)
+        ).all()
         result = []
         for t in templates:
             result.append(QuizTemplate(
@@ -276,7 +306,8 @@ def get_featured_templates(limit: int = 6) -> list[QuizTemplate]:
                 rating=t.rating,
                 ratings_count=t.ratings_count,
                 created_at=t.created_at.isoformat(),
-                tags=t.tags or []
+                tags=t.tags or [],
+                is_private=False
             ))
 
         # Score = rating * log(uses + 1)
