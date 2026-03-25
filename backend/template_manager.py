@@ -62,6 +62,46 @@ def publish_template(
         db.close()
 
 
+def get_template_by_quiz_id(quiz_id: str) -> QuizTemplate | None:
+    """Get a template by its source quiz ID."""
+    db = SessionLocal()
+    try:
+        template = db.query(TemplateDB).filter(TemplateDB.quiz_id == quiz_id).first()
+        if not template:
+            return None
+        return QuizTemplate(
+            id=template.id,
+            quiz_id=template.quiz_id,
+            name=template.name,
+            description=template.description,
+            category=TemplateCategory(template.category),
+            author_id=template.author_id,
+            author_name=template.author_name,
+            questions_count=template.questions_count,
+            uses_count=template.uses_count,
+            rating=template.rating,
+            ratings_count=template.ratings_count,
+            created_at=template.created_at.isoformat(),
+            tags=template.tags or [],
+            is_private=template.is_private or False
+        )
+    finally:
+        db.close()
+
+
+def delete_all_templates() -> int:
+    """Delete all templates. For admin cleanup."""
+    db = SessionLocal()
+    try:
+        # Delete ratings first
+        db.query(TemplateRatingDB).delete()
+        count = db.query(TemplateDB).delete()
+        db.commit()
+        return count
+    finally:
+        db.close()
+
+
 def get_template(template_id: str) -> QuizTemplate | None:
     """Get a specific template by ID."""
     db = SessionLocal()

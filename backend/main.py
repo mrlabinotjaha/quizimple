@@ -39,7 +39,8 @@ from session_manager import (
 from template_manager import (
     publish_template, get_template, get_all_templates, get_user_templates,
     increment_uses, rate_template, delete_template, get_featured_templates,
-    get_categories_with_counts, verify_template_passcode, update_template
+    get_categories_with_counts, verify_template_passcode, update_template,
+    get_template_by_quiz_id, delete_all_templates
 )
 from database import init_db
 
@@ -527,6 +528,11 @@ async def publish_quiz_as_template(
     if len(quiz.questions) < 1:
         raise HTTPException(status_code=400, detail="Quiz must have at least 1 question")
 
+    # Prevent duplicate - if template already exists for this quiz, return error
+    existing = get_template_by_quiz_id(quiz_id)
+    if existing:
+        raise HTTPException(status_code=400, detail="Template already exists for this quiz. Use edit instead.")
+
     template = publish_template(
         quiz_id=quiz_id,
         name=data.name,
@@ -645,6 +651,13 @@ async def update_template_endpoint(
     if not updated:
         raise HTTPException(status_code=404, detail="Template not found or not authorized")
     return updated
+
+
+@app.delete("/api/templates/all")
+async def delete_all_templates_endpoint(current_user: dict = Depends(get_current_user)):
+    """Delete all templates. Admin cleanup."""
+    count = delete_all_templates()
+    return {"message": f"Deleted {count} templates"}
 
 
 @app.delete("/api/templates/{template_id}")
