@@ -24,7 +24,7 @@ import {
   Lock,
   Users
 } from 'lucide-react';
-import { QuizTemplate, TemplateCategory, Question } from '../types';
+import { QuizTemplate, TemplateCategory, Question, Group } from '../types';
 import { API_URL } from '../config';
 
 interface TemplateDetails extends QuizTemplate {
@@ -52,7 +52,9 @@ const categoryConfig: Record<TemplateCategory, { label: string; icon: any; color
 
 export function TemplateMarket({ token, onBack, onUseTemplate, onLogin }: TemplateMarketProps) {
   const [templates, setTemplates] = useState<QuizTemplate[]>([]);
-  const [featuredTemplates, setFeaturedTemplates] = useState<QuizTemplate[]>([]);
+  const [userGroups, setUserGroups] = useState<Group[]>([]);
+  const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
+  const [groupTemplates, setGroupTemplates] = useState<QuizTemplate[]>([]);
   const [categories, setCategories] = useState<{ category: string; count: number }[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -130,18 +132,26 @@ export function TemplateMarket({ token, onBack, onUseTemplate, onLogin }: Templa
     fetchTemplates();
   }, [selectedCategory, sortBy, searchQuery]);
 
+  const authHeaders: Record<string, string> = token
+    ? { Authorization: `Bearer ${token}` }
+    : {};
+
   const fetchData = async () => {
     try {
-      const [featuredRes, categoriesRes] = await Promise.all([
-        fetch(`${API_URL}/templates/featured`),
+      const fetches: Promise<Response>[] = [
         fetch(`${API_URL}/templates/categories`)
-      ]);
-
-      if (featuredRes.ok) {
-        setFeaturedTemplates(await featuredRes.json());
+      ];
+      if (token) {
+        fetches.push(fetch(`${API_URL}/groups`, { headers: authHeaders }));
       }
-      if (categoriesRes.ok) {
-        setCategories(await categoriesRes.json());
+
+      const results = await Promise.all(fetches);
+
+      if (results[0].ok) {
+        setCategories(await results[0].json());
+      }
+      if (results[1]?.ok) {
+        setUserGroups(await results[1].json());
       }
     } catch (error) {
       console.error('Failed to fetch data:', error);
@@ -157,12 +167,24 @@ export function TemplateMarket({ token, onBack, onUseTemplate, onLogin }: Templa
       if (searchQuery) params.set('search', searchQuery);
       params.set('sort_by', sortBy);
 
-      const res = await fetch(`${API_URL}/templates?${params}`);
+      const res = await fetch(`${API_URL}/templates?${params}`, { headers: authHeaders });
       if (res.ok) {
         setTemplates(await res.json());
       }
     } catch (error) {
       console.error('Failed to fetch templates:', error);
+    }
+  };
+
+  const fetchGroupTemplates = async (group: Group) => {
+    setSelectedGroup(group);
+    try {
+      const res = await fetch(`${API_URL}/templates/group/${group.id}`, { headers: authHeaders });
+      if (res.ok) {
+        setGroupTemplates(await res.json());
+      }
+    } catch (error) {
+      console.error('Failed to fetch group templates:', error);
     }
   };
 
@@ -382,69 +404,104 @@ export function TemplateMarket({ token, onBack, onUseTemplate, onLogin }: Templa
           </div>
         </div>
 
-        {/* Featured Templates */}
-        {!selectedCategory && !searchQuery && featuredTemplates.length > 0 && (
+        {/* My Groups */}
+        {!selectedCategory && !searchQuery && userGroups.length > 0 && !selectedGroup && (
           <div className="mb-12">
             <h2 className="text-xl font-semibold text-[#1E1E2E] dark:text-white mb-4" style={{ fontFamily: "'Instrument Serif', serif" }}>
-              Featured Templates
+              My Groups
             </h2>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {featuredTemplates.map((template) => {
-                const config = categoryConfig[template.category];
-                const Icon = config?.icon || Sparkles;
-                return (
-                  <div
-                    key={template.id}
-                    className="bg-white dark:bg-[#1A1A1F] rounded-2xl p-6 border border-[#1E1E2E]/5 dark:border-white/10 hover:shadow-xl dark:hover:shadow-black/30 transition-all cursor-pointer group"
-                    onClick={() => handleTemplateClick(template)}
-                  >
-                    <div className="flex items-start justify-between mb-4">
-                      <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${config?.color || 'from-gray-400 to-gray-500'} flex items-center justify-center`}>
-                        <Icon className="w-6 h-6 text-white" />
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {template.visibility === 'private' ? (
-                          <span className="flex items-center gap-1 px-2 py-0.5 bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-medium rounded-full">
-                            <Lock className="w-3 h-3" />
-                            Private
-                          </span>
-                        ) : template.visibility === 'group' ? (
-                          <span className="flex items-center gap-1 px-2 py-0.5 bg-violet-100 dark:bg-violet-500/20 text-violet-600 dark:text-violet-400 text-xs font-medium rounded-full">
-                            <Users className="w-3 h-3" />
-                            {template.group_name || 'Group'}
-                          </span>
-                        ) : (
-                          <span className="flex items-center gap-1 px-2 py-0.5 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-medium rounded-full">
-                            <Globe className="w-3 h-3" />
-                            Public
-                          </span>
-                        )}
-                        <div className="flex items-center gap-1">
-                          <Star className="w-4 h-4 text-amber-400" fill="#fbbf24" />
-                          <span className="text-sm font-medium text-[#1E1E2E] dark:text-white">{template.rating.toFixed(1)}</span>
-                        </div>
-                      </div>
+              {userGroups.map((group) => (
+                <button
+                  key={group.id}
+                  onClick={() => fetchGroupTemplates(group)}
+                  className="bg-white dark:bg-[#1A1A1F] rounded-2xl p-6 border border-[#1E1E2E]/5 dark:border-white/10 hover:shadow-xl dark:hover:shadow-black/30 hover:border-violet-500/30 transition-all text-left group"
+                >
+                  <div className="flex items-center gap-4 mb-3">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
+                      <Users className="w-6 h-6 text-white" />
                     </div>
-                    <h3 className="font-semibold text-[#1E1E2E] dark:text-white mb-1 group-hover:text-[#FF6B4A] transition-colors">
-                      {template.name}
-                    </h3>
-                    <p className="text-sm text-[#1E1E2E]/50 dark:text-white/50 mb-3 line-clamp-2">{template.description}</p>
-                    <div className="flex items-center justify-between text-sm text-[#1E1E2E]/40 dark:text-white/40">
-                      <span>{template.questions_count} questions</span>
-                      <span className="flex items-center gap-1">
-                        <Download className="w-3 h-3" />
-                        {template.uses_count} uses
-                      </span>
+                    <div>
+                      <h3 className="font-semibold text-[#1E1E2E] dark:text-white group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors">
+                        {group.name}
+                      </h3>
+                      <p className="text-sm text-[#1E1E2E]/50 dark:text-white/50">{group.member_count} members</p>
                     </div>
                   </div>
-                );
-              })}
+                  <div className="flex items-center justify-between text-sm text-[#1E1E2E]/40 dark:text-white/40">
+                    <span>View group templates</span>
+                    <ChevronRight className="w-4 h-4 group-hover:text-violet-500 transition-colors" />
+                  </div>
+                </button>
+              ))}
             </div>
           </div>
         )}
 
+        {/* Group Templates View */}
+        {selectedGroup && (
+          <div className="mb-8">
+            <div className="flex items-center gap-3 mb-4">
+              <button
+                onClick={() => { setSelectedGroup(null); setGroupTemplates([]); }}
+                className="p-2 hover:bg-[#1E1E2E]/5 dark:hover:bg-white/10 rounded-xl transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5 text-[#1E1E2E] dark:text-white" />
+              </button>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
+                  <Users className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold text-[#1E1E2E] dark:text-white" style={{ fontFamily: "'Instrument Serif', serif" }}>
+                    {selectedGroup.name}
+                  </h2>
+                  <p className="text-sm text-[#1E1E2E]/50 dark:text-white/50">{groupTemplates.length} templates</p>
+                </div>
+              </div>
+            </div>
+
+            {groupTemplates.length > 0 ? (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {groupTemplates.map((template) => {
+                  const config = categoryConfig[template.category];
+                  const Icon = config?.icon || Sparkles;
+                  return (
+                    <div
+                      key={template.id}
+                      className="bg-white dark:bg-[#1A1A1F] rounded-2xl p-6 border border-[#1E1E2E]/5 dark:border-white/10 hover:shadow-lg dark:hover:shadow-black/30 transition-all cursor-pointer group"
+                      onClick={() => setSelectedTemplate(template)}
+                    >
+                      <div className="flex items-start justify-between mb-4">
+                        <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${config?.color || 'from-gray-400 to-gray-500'} flex items-center justify-center`}>
+                          <Icon className="w-5 h-5 text-white" />
+                        </div>
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium bg-gradient-to-r ${config?.color || 'from-gray-400 to-gray-500'} text-white`}>
+                          {config?.label || 'Other'}
+                        </span>
+                      </div>
+                      <h3 className="font-semibold text-[#1E1E2E] dark:text-white mb-1 group-hover:text-[#FF6B4A] transition-colors">{template.name}</h3>
+                      <p className="text-sm text-[#1E1E2E]/50 dark:text-white/50 mb-3 line-clamp-2">{template.description}</p>
+                      <div className="flex items-center gap-3 text-sm text-[#1E1E2E]/40 dark:text-white/40">
+                        <span>{template.questions_count} questions</span>
+                        <span className="flex items-center gap-1"><Download className="w-3 h-3" />{template.uses_count}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-16 bg-white dark:bg-[#1A1A1F] rounded-2xl border border-[#1E1E2E]/5 dark:border-white/10">
+                <Users className="w-16 h-16 text-[#1E1E2E]/20 dark:text-white/20 mx-auto mb-4" />
+                <p className="text-[#1E1E2E]/50 dark:text-white/50 text-lg">No templates in this group yet</p>
+                <p className="text-[#1E1E2E]/40 dark:text-white/40 text-sm">Publish a template with "Group" visibility to share it here</p>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* All Templates */}
-        <div>
+        {!selectedGroup && <div>
           <h2 className="text-xl font-semibold text-[#1E1E2E] dark:text-white mb-4" style={{ fontFamily: "'Instrument Serif', serif" }}>
             {selectedCategory ? categoryConfig[selectedCategory]?.label : 'All'} Templates
           </h2>
@@ -515,7 +572,7 @@ export function TemplateMarket({ token, onBack, onUseTemplate, onLogin }: Templa
               <p className="text-[#1E1E2E]/40 dark:text-white/40 text-sm">Be the first to publish a template in this category!</p>
             </div>
           )}
-        </div>
+        </div>}
       </div>
 
       {/* Template Detail Modal */}

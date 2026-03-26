@@ -209,6 +209,19 @@ def get_all_templates(
         db.close()
 
 
+def get_group_templates(group_id: str) -> list[QuizTemplate]:
+    """Get all templates shared with a specific group."""
+    db = SessionLocal()
+    try:
+        templates = db.query(TemplateDB).filter(
+            TemplateDB.group_id == group_id,
+            TemplateDB.visibility == "group"
+        ).order_by(TemplateDB.created_at.desc()).all()
+        return [_build_template(t, db) for t in templates]
+    finally:
+        db.close()
+
+
 def get_user_templates(user_id: str) -> list[QuizTemplate]:
     """Get all templates published by a user."""
     db = SessionLocal()

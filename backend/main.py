@@ -40,7 +40,7 @@ from template_manager import (
     publish_template, get_template, get_all_templates, get_user_templates,
     increment_uses, rate_template, delete_template, get_featured_templates,
     get_categories_with_counts, verify_template_passcode, update_template,
-    get_template_by_quiz_id, delete_all_templates
+    get_template_by_quiz_id, delete_all_templates, get_group_templates
 )
 from group_manager import (
     create_group as gm_create_group, get_group as gm_get_group,
@@ -511,6 +511,14 @@ async def get_featured(request: Request):
 async def get_categories():
     """Get all categories with template counts."""
     return get_categories_with_counts()
+
+
+@app.get("/api/templates/group/{group_id}")
+async def get_group_templates_endpoint(group_id: str, current_user: dict = Depends(get_current_user)):
+    """Get all templates in a group (must be a member)."""
+    if not is_group_member(group_id, current_user["id"]):
+        raise HTTPException(status_code=403, detail="Not a member of this group")
+    return get_group_templates(group_id)
 
 
 @app.get("/api/templates/mine")
