@@ -54,9 +54,16 @@ app = FastAPI(title="Quiz App API")
 # Initialize database tables on startup
 @app.on_event("startup")
 async def startup_event():
+    import asyncio
     print("Initializing database...")
-    init_db()
-    print("Database initialized successfully!")
+    try:
+        loop = asyncio.get_event_loop()
+        await asyncio.wait_for(loop.run_in_executor(None, init_db), timeout=30)
+        print("Database initialized successfully!")
+    except asyncio.TimeoutError:
+        print("WARNING: Database init timed out after 30s - will retry on first request")
+    except Exception as e:
+        print(f"WARNING: Database init failed: {e}")
 
 app.add_middleware(
     CORSMiddleware,

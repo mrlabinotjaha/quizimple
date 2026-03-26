@@ -22,8 +22,8 @@ COPY backend/ ./
 # Copy frontend build
 COPY --from=frontend-build /app/frontend/dist ./static
 
-# Expose port
-EXPOSE $PORT
+# Expose port (Render sets PORT dynamically, default 10000)
+EXPOSE 10000
 
 # Start server
 CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"]

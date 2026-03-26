@@ -12,8 +12,8 @@ DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./quiz.db")
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-# Create engine
-engine = create_engine(DATABASE_URL)
+# Create engine with connection timeout
+engine = create_engine(DATABASE_URL, pool_pre_ping=True, pool_timeout=10, connect_args={"connect_timeout": 10} if "postgresql" in DATABASE_URL else {})
 
 # Create session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -157,8 +157,12 @@ def _migrate_db():
 
 def init_db():
     """Initialize database tables."""
-    Base.metadata.create_all(bind=engine)
-    _migrate_db()
+    try:
+        Base.metadata.create_all(bind=engine)
+        _migrate_db()
+    except Exception as e:
+        print(f"WARNING: Database initialization error: {e}")
+        print("App will start but some features may not work until DB is available.")
 
 
 def get_db():
