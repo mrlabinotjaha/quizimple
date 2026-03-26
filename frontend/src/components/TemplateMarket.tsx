@@ -124,25 +124,25 @@ export function TemplateMarket({ token, onBack, onUseTemplate, onLogin }: Templa
     });
   }, []);
 
+  const getAuthHeaders = (): Record<string, string> =>
+    token ? { Authorization: `Bearer ${token}` } : {};
+
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [token]);
 
   useEffect(() => {
     fetchTemplates();
-  }, [selectedCategory, sortBy, searchQuery]);
-
-  const authHeaders: Record<string, string> = token
-    ? { Authorization: `Bearer ${token}` }
-    : {};
+  }, [selectedCategory, sortBy, searchQuery, token]);
 
   const fetchData = async () => {
     try {
+      const headers = getAuthHeaders();
       const fetches: Promise<Response>[] = [
         fetch(`${API_URL}/templates/categories`)
       ];
       if (token) {
-        fetches.push(fetch(`${API_URL}/groups`, { headers: authHeaders }));
+        fetches.push(fetch(`${API_URL}/groups`, { headers }));
       }
 
       const results = await Promise.all(fetches);
@@ -167,7 +167,7 @@ export function TemplateMarket({ token, onBack, onUseTemplate, onLogin }: Templa
       if (searchQuery) params.set('search', searchQuery);
       params.set('sort_by', sortBy);
 
-      const res = await fetch(`${API_URL}/templates?${params}`, { headers: authHeaders });
+      const res = await fetch(`${API_URL}/templates?${params}`, { headers: getAuthHeaders() });
       if (res.ok) {
         setTemplates(await res.json());
       }
@@ -179,7 +179,7 @@ export function TemplateMarket({ token, onBack, onUseTemplate, onLogin }: Templa
   const fetchGroupTemplates = async (group: Group) => {
     setSelectedGroup(group);
     try {
-      const res = await fetch(`${API_URL}/templates/group/${group.id}`, { headers: authHeaders });
+      const res = await fetch(`${API_URL}/templates/group/${group.id}`, { headers: getAuthHeaders() });
       if (res.ok) {
         setGroupTemplates(await res.json());
       }
