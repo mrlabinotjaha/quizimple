@@ -21,7 +21,8 @@ import {
   ChevronDown,
   ChevronUp,
   CheckCircle,
-  Lock
+  Lock,
+  Users
 } from 'lucide-react';
 import { QuizTemplate, TemplateCategory, Question } from '../types';
 import { API_URL } from '../config';
@@ -402,10 +403,15 @@ export function TemplateMarket({ token, onBack, onUseTemplate, onLogin }: Templa
                         <Icon className="w-6 h-6 text-white" />
                       </div>
                       <div className="flex items-center gap-2">
-                        {template.is_private ? (
+                        {template.visibility === 'private' ? (
                           <span className="flex items-center gap-1 px-2 py-0.5 bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-medium rounded-full">
                             <Lock className="w-3 h-3" />
                             Private
+                          </span>
+                        ) : template.visibility === 'group' ? (
+                          <span className="flex items-center gap-1 px-2 py-0.5 bg-violet-100 dark:bg-violet-500/20 text-violet-600 dark:text-violet-400 text-xs font-medium rounded-full">
+                            <Users className="w-3 h-3" />
+                            {template.group_name || 'Group'}
                           </span>
                         ) : (
                           <span className="flex items-center gap-1 px-2 py-0.5 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-medium rounded-full">
@@ -458,10 +464,15 @@ export function TemplateMarket({ token, onBack, onUseTemplate, onLogin }: Templa
                         <Icon className="w-5 h-5 text-white" />
                       </div>
                       <div className="flex items-center gap-2">
-                        {template.is_private ? (
+                        {template.visibility === 'private' ? (
                           <span className="flex items-center gap-1 px-2 py-0.5 bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-medium rounded-full">
                             <Lock className="w-3 h-3" />
                             Private
+                          </span>
+                        ) : template.visibility === 'group' ? (
+                          <span className="flex items-center gap-1 px-2 py-0.5 bg-violet-100 dark:bg-violet-500/20 text-violet-600 dark:text-violet-400 text-xs font-medium rounded-full">
+                            <Users className="w-3 h-3" />
+                            {template.group_name || 'Group'}
                           </span>
                         ) : (
                           <span className="flex items-center gap-1 px-2 py-0.5 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-medium rounded-full">

@@ -13,7 +13,7 @@ from models import (
     UserCreate, UserLogin, Token, QuizCreate, QuizUpdate, QuestionCreate,
     QuestionsImport, Quiz, Question, AIGenerateRequest, TemplateCreate,
     TemplateCategory, TemplateRating, TemplateUpdate, GoogleAuthRequest,
-    UserUpdate, PasswordChange, AccountDelete, User
+    UserUpdate, PasswordChange, AccountDelete, User, GroupCreate, GroupInvite, Group
 )
 from auth import create_access_token, get_current_user, decode_token
 from user_manager import (
@@ -41,6 +41,11 @@ from template_manager import (
     increment_uses, rate_template, delete_template, get_featured_templates,
     get_categories_with_counts, verify_template_passcode, update_template,
     get_template_by_quiz_id, delete_all_templates
+)
+from group_manager import (
+    create_group as gm_create_group, get_group as gm_get_group,
+    get_user_groups, add_member, remove_member as gm_remove_member,
+    delete_group as gm_delete_group, is_group_member, invite_by_username
 )
 from database import init_db
 
@@ -460,6 +465,7 @@ async def get_session_details(session_id: str, current_user: dict = Depends(get_
 # Template Market endpoints
 @app.get("/api/templates")
 async def list_templates(
+    request: Request,
     category: Optional[str] = None,
     search: Optional[str] = None,
     sort_by: str = "uses"
@@ -472,14 +478,32 @@ async def list_templates(
         except ValueError:
             pass
 
-    templates = get_all_templates(category=cat, search=search, sort_by=sort_by)
+    # Try to get current user for group filtering (optional auth)
+    user_id = None
+    auth_header = request.headers.get("authorization", "")
+    if auth_header.startswith("Bearer "):
+        token = auth_header.split(" ", 1)[1]
+        payload = decode_token(token)
+        if payload:
+            user_id = payload.get("sub")
+
+    templates = get_all_templates(category=cat, search=search, sort_by=sort_by, user_id=user_id)
     return templates
 
 
 @app.get("/api/templates/featured")
-async def get_featured():
+async def get_featured(request: Request):
     """Get featured templates."""
-    templates = get_featured_templates()
+    # Try to get current user for group filtering (optional auth)
+    user_id = None
+    auth_header = request.headers.get("authorization", "")
+    if auth_header.startswith("Bearer "):
+        token = auth_header.split(" ", 1)[1]
+        payload = decode_token(token)
+        if payload:
+            user_id = payload.get("sub")
+
+    templates = get_featured_templates(user_id=user_id)
     return templates
 
 
@@ -543,7 +567,9 @@ async def publish_quiz_as_template(
         questions_count=len(quiz.questions),
         tags=data.tags,
         is_private=data.is_private,
-        passcode=data.passcode
+        passcode=data.passcode,
+        visibility=data.visibility,
+        group_id=data.group_id
     )
     return template
 
@@ -646,7 +672,9 @@ async def update_template_endpoint(
         category=data.category,
         tags=data.tags,
         is_private=data.is_private,
-        passcode=data.passcode
+        passcode=data.passcode,
+        visibility=data.visibility,
+        group_id=data.group_id
     )
     if not updated:
         raise HTTPException(status_code=404, detail="Template not found or not authorized")
@@ -666,6 +694,75 @@ async def delete_template_endpoint(template_id: str, current_user: dict = Depend
     if not delete_template(template_id, current_user["id"]):
         raise HTTPException(status_code=404, detail="Template not found or not authorized")
     return {"message": "Template deleted"}
+
+
+# Group endpoints
+@app.post("/api/groups")
+async def create_group_endpoint(data: GroupCreate, current_user: dict = Depends(get_current_user)):
+    """Create a new group."""
+    group = gm_create_group(data.name, current_user["id"])
+    return group
+
+
+@app.get("/api/groups")
+async def list_user_groups_endpoint(current_user: dict = Depends(get_current_user)):
+    """Get all groups the current user is a member of."""
+    groups = get_user_groups(current_user["id"])
+    return groups
+
+
+@app.get("/api/groups/{group_id}")
+async def get_group_endpoint(group_id: str, current_user: dict = Depends(get_current_user)):
+    """Get group details."""
+    group = gm_get_group(group_id)
+    if not group:
+        raise HTTPException(status_code=404, detail="Group not found")
+    if not is_group_member(group_id, current_user["id"]):
+        raise HTTPException(status_code=403, detail="Not a member of this group")
+    return group
+
+
+@app.post("/api/groups/{group_id}/invite")
+async def invite_to_group(group_id: str, data: GroupInvite, current_user: dict = Depends(get_current_user)):
+    """Invite a user to a group by username. Only the owner can invite."""
+    group = gm_get_group(group_id)
+    if not group:
+        raise HTTPException(status_code=404, detail="Group not found")
+    if group.owner_id != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Only the group owner can invite members")
+    result = invite_by_username(group_id, data.username)
+    if not result:
+        raise HTTPException(status_code=400, detail="User not found or already a member")
+    return result
+
+
+@app.delete("/api/groups/{group_id}/members/{user_id}")
+async def remove_from_group(group_id: str, user_id: str, current_user: dict = Depends(get_current_user)):
+    """Remove a member from a group. Only the owner can remove members."""
+    group = gm_get_group(group_id)
+    if not group:
+        raise HTTPException(status_code=404, detail="Group not found")
+    if group.owner_id != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Only the group owner can remove members")
+    if not gm_remove_member(group_id, user_id):
+        raise HTTPException(status_code=400, detail="Cannot remove user (not found or is owner)")
+    return {"message": "Member removed"}
+
+
+@app.delete("/api/groups/{group_id}")
+async def delete_group_endpoint(group_id: str, current_user: dict = Depends(get_current_user)):
+    """Delete a group. Only the owner can delete."""
+    if not gm_delete_group(group_id, current_user["id"]):
+        raise HTTPException(status_code=404, detail="Group not found or not authorized")
+    return {"message": "Group deleted"}
+
+
+@app.delete("/api/groups/{group_id}/leave")
+async def leave_group(group_id: str, current_user: dict = Depends(get_current_user)):
+    """Leave a group. The owner cannot leave (must delete instead)."""
+    if not gm_remove_member(group_id, current_user["id"]):
+        raise HTTPException(status_code=400, detail="Cannot leave group (not a member or you are the owner)")
+    return {"message": "Left group"}
 
 
 # WebSocket endpoint

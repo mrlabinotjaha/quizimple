@@ -8,6 +8,12 @@ class QuestionType(str, Enum):
     MULTIPLE = "multiple"
 
 
+class TemplateVisibility(str, Enum):
+    PUBLIC = "public"
+    PRIVATE = "private"
+    GROUP = "group"
+
+
 class Question(BaseModel):
     text: str
     type: QuestionType = QuestionType.SINGLE
@@ -221,6 +227,9 @@ class QuizTemplate(BaseModel):
     created_at: str  # ISO datetime
     tags: list[str] = []
     is_private: bool = False
+    visibility: str = "public"  # "public", "private", "group"
+    group_id: Optional[str] = None
+    group_name: Optional[str] = None
 
 
 class TemplateCreate(BaseModel):
@@ -230,6 +239,8 @@ class TemplateCreate(BaseModel):
     tags: list[str] = []
     is_private: bool = False
     passcode: Optional[str] = None
+    visibility: str = "public"
+    group_id: Optional[str] = None
 
 
 class TemplateUpdate(BaseModel):
@@ -239,7 +250,27 @@ class TemplateUpdate(BaseModel):
     tags: Optional[list[str]] = None
     is_private: Optional[bool] = None
     passcode: Optional[str] = None
+    visibility: Optional[str] = None
+    group_id: Optional[str] = None
 
 
 class TemplateRating(BaseModel):
     rating: int  # 1-5
+
+
+# Group models
+class Group(BaseModel):
+    id: str
+    name: str
+    owner_id: str
+    created_at: str
+    member_count: int = 0
+    members: list[dict] = []  # [{id, username, role}]
+
+
+class GroupCreate(BaseModel):
+    name: str
+
+
+class GroupInvite(BaseModel):
+    username: str

@@ -33,9 +33,10 @@ interface HomeProps {
   onEditQuiz?: (quiz: Quiz) => void;
   onJoinQuiz?: () => void;
   onSettings?: () => void;
+  onGroups?: () => void;
 }
 
-export function Home({ onEnterRoom, onTemplateMarket, onViewQuizDetail, onCreateQuiz, onEditQuiz, onJoinQuiz, onSettings }: HomeProps) {
+export function Home({ onEnterRoom, onTemplateMarket, onViewQuizDetail, onCreateQuiz, onEditQuiz, onJoinQuiz, onSettings, onGroups }: HomeProps) {
   const { user, token, logout } = useAuth();
   const { showToast } = useToast();
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
@@ -152,6 +153,15 @@ export function Home({ onEnterRoom, onTemplateMarket, onViewQuizDetail, onCreate
                 >
                   <Store className="w-4 h-4" />
                   Templates
+                </button>
+              )}
+              {onGroups && (
+                <button
+                  onClick={onGroups}
+                  className="flex items-center gap-2 px-4 py-2.5 text-[#1E1E2E]/60 dark:text-white/60 hover:text-[#1E1E2E] dark:hover:text-white font-medium text-sm transition-colors"
+                >
+                  <Users className="w-4 h-4" />
+                  Groups
                 </button>
               )}
               <ThemeToggle />
@@ -278,19 +288,27 @@ export function Home({ onEnterRoom, onTemplateMarket, onViewQuizDetail, onCreate
                             Hidden Results
                           </span>
                         )}
-                        {templateByQuizId[quiz.id] && (
-                          templateByQuizId[quiz.id].is_private ? (
-                            <span className="flex items-center gap-1 px-2 py-0.5 bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 text-xs font-medium rounded-full">
+                        {templateByQuizId[quiz.id] && (() => {
+                          const vis = templateByQuizId[quiz.id].visibility || (templateByQuizId[quiz.id].is_private ? 'private' : 'public');
+                          if (vis === 'private') return (
+                            <span className="flex items-center gap-1 px-2 py-0.5 bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-medium rounded-full">
                               <Lock className="w-3 h-3" />
                               Private
                             </span>
-                          ) : (
+                          );
+                          if (vis === 'group') return (
+                            <span className="flex items-center gap-1 px-2 py-0.5 bg-violet-100 dark:bg-violet-500/20 text-violet-600 dark:text-violet-400 text-xs font-medium rounded-full">
+                              <Users className="w-3 h-3" />
+                              {templateByQuizId[quiz.id].group_name || 'Group'}
+                            </span>
+                          );
+                          return (
                             <span className="flex items-center gap-1 px-2 py-0.5 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-medium rounded-full">
                               <Globe className="w-3 h-3" />
                               Public
                             </span>
-                          )
-                        )}
+                          );
+                        })()}
                       </div>
                     </div>
                     <div className="flex items-center gap-2">

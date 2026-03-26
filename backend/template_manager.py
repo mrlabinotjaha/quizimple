@@ -2,7 +2,47 @@ from datetime import datetime
 import uuid
 import math
 from models import QuizTemplate, TemplateCategory
-from database import SessionLocal, TemplateDB, TemplateRatingDB
+from database import SessionLocal, TemplateDB, TemplateRatingDB, GroupDB, GroupMemberDB
+
+
+def _get_visibility(t) -> str:
+    """Get the visibility for a template, with backward compat for is_private."""
+    if hasattr(t, 'visibility') and t.visibility:
+        return t.visibility
+    # Backward compat: if is_private is True, treat as "private"
+    if t.is_private:
+        return "private"
+    return "public"
+
+
+def _build_template(t, db=None) -> QuizTemplate:
+    """Build a QuizTemplate from a TemplateDB row."""
+    visibility = _get_visibility(t)
+    group_id = getattr(t, 'group_id', None)
+    group_name = None
+    if group_id and db:
+        group = db.query(GroupDB).filter(GroupDB.id == group_id).first()
+        if group:
+            group_name = group.name
+    return QuizTemplate(
+        id=t.id,
+        quiz_id=t.quiz_id,
+        name=t.name,
+        description=t.description,
+        category=TemplateCategory(t.category),
+        author_id=t.author_id,
+        author_name=t.author_name,
+        questions_count=t.questions_count,
+        uses_count=t.uses_count,
+        rating=t.rating,
+        ratings_count=t.ratings_count,
+        created_at=t.created_at.isoformat(),
+        tags=t.tags or [],
+        is_private=t.is_private or False,
+        visibility=visibility,
+        group_id=group_id,
+        group_name=group_name
+    )
 
 
 def publish_template(
@@ -15,12 +55,18 @@ def publish_template(
     questions_count: int,
     tags: list[str],
     is_private: bool = False,
-    passcode: str | None = None
+    passcode: str | None = None,
+    visibility: str = "public",
+    group_id: str | None = None
 ) -> QuizTemplate:
     """Publish a quiz as a template to the marketplace."""
     db = SessionLocal()
     try:
         template_id = str(uuid.uuid4())
+
+        # Backward compat: if is_private is set but visibility not explicitly changed
+        if is_private and visibility == "public":
+            visibility = "private"
 
         db_template = TemplateDB(
             id=template_id,
@@ -37,27 +83,15 @@ def publish_template(
             created_at=datetime.utcnow(),
             tags=tags,
             is_private=is_private,
-            passcode=passcode if is_private else None
+            passcode=passcode if is_private or visibility == "private" else None,
+            visibility=visibility,
+            group_id=group_id if visibility == "group" else None
         )
         db.add(db_template)
         db.commit()
+        db.refresh(db_template)
 
-        return QuizTemplate(
-            id=template_id,
-            quiz_id=quiz_id,
-            name=name,
-            description=description,
-            category=category,
-            author_id=author_id,
-            author_name=author_name,
-            questions_count=questions_count,
-            uses_count=0,
-            rating=0.0,
-            ratings_count=0,
-            created_at=db_template.created_at.isoformat(),
-            tags=tags,
-            is_private=is_private
-        )
+        return _build_template(db_template, db)
     finally:
         db.close()
 
@@ -69,22 +103,7 @@ def get_template_by_quiz_id(quiz_id: str) -> QuizTemplate | None:
         template = db.query(TemplateDB).filter(TemplateDB.quiz_id == quiz_id).first()
         if not template:
             return None
-        return QuizTemplate(
-            id=template.id,
-            quiz_id=template.quiz_id,
-            name=template.name,
-            description=template.description,
-            category=TemplateCategory(template.category),
-            author_id=template.author_id,
-            author_name=template.author_name,
-            questions_count=template.questions_count,
-            uses_count=template.uses_count,
-            rating=template.rating,
-            ratings_count=template.ratings_count,
-            created_at=template.created_at.isoformat(),
-            tags=template.tags or [],
-            is_private=template.is_private or False
-        )
+        return _build_template(template, db)
     finally:
         db.close()
 
@@ -109,22 +128,7 @@ def get_template(template_id: str) -> QuizTemplate | None:
         template = db.query(TemplateDB).filter(TemplateDB.id == template_id).first()
         if not template:
             return None
-        return QuizTemplate(
-            id=template.id,
-            quiz_id=template.quiz_id,
-            name=template.name,
-            description=template.description,
-            category=TemplateCategory(template.category),
-            author_id=template.author_id,
-            author_name=template.author_name,
-            questions_count=template.questions_count,
-            uses_count=template.uses_count,
-            rating=template.rating,
-            ratings_count=template.ratings_count,
-            created_at=template.created_at.isoformat(),
-            tags=template.tags or [],
-            is_private=template.is_private or False
-        )
+        return _build_template(template, db)
     finally:
         db.close()
 
@@ -147,7 +151,8 @@ def get_all_templates(
     category: TemplateCategory | None = None,
     search: str | None = None,
     sort_by: str = "uses",  # uses, rating, recent
-    limit: int = 50
+    limit: int = 50,
+    user_id: str | None = None
 ) -> list[QuizTemplate]:
     """Get all templates with optional filtering and sorting."""
     db = SessionLocal()
@@ -160,25 +165,26 @@ def get_all_templates(
 
         templates = query.all()
 
-        # Convert to QuizTemplate objects
+        # Get user's group IDs for group template filtering
+        user_group_ids = set()
+        if user_id:
+            memberships = db.query(GroupMemberDB).filter(GroupMemberDB.user_id == user_id).all()
+            user_group_ids = {m.group_id for m in memberships}
+
+        # Convert to QuizTemplate objects, filtering by visibility
         result = []
         for t in templates:
-            result.append(QuizTemplate(
-                id=t.id,
-                quiz_id=t.quiz_id,
-                name=t.name,
-                description=t.description,
-                category=TemplateCategory(t.category),
-                author_id=t.author_id,
-                author_name=t.author_name,
-                questions_count=t.questions_count,
-                uses_count=t.uses_count,
-                rating=t.rating,
-                ratings_count=t.ratings_count,
-                created_at=t.created_at.isoformat(),
-                tags=t.tags or [],
-                is_private=t.is_private or False
-            ))
+            visibility = _get_visibility(t)
+            # Always include public and private templates
+            if visibility in ("public", "private"):
+                result.append(_build_template(t, db))
+            elif visibility == "group":
+                # Only include group templates if user is a member
+                if t.group_id and t.group_id in user_group_ids:
+                    result.append(_build_template(t, db))
+            else:
+                # Unknown visibility, include anyway
+                result.append(_build_template(t, db))
 
         # Search in name, description, and tags
         if search:
@@ -210,22 +216,7 @@ def get_user_templates(user_id: str) -> list[QuizTemplate]:
         templates = db.query(TemplateDB).filter(TemplateDB.author_id == user_id).order_by(TemplateDB.created_at.desc()).all()
         result = []
         for t in templates:
-            result.append(QuizTemplate(
-                id=t.id,
-                quiz_id=t.quiz_id,
-                name=t.name,
-                description=t.description,
-                category=TemplateCategory(t.category),
-                author_id=t.author_id,
-                author_name=t.author_name,
-                questions_count=t.questions_count,
-                uses_count=t.uses_count,
-                rating=t.rating,
-                ratings_count=t.ratings_count,
-                created_at=t.created_at.isoformat(),
-                tags=t.tags or [],
-                is_private=t.is_private or False
-            ))
+            result.append(_build_template(t, db))
         return result
     finally:
         db.close()
@@ -280,23 +271,9 @@ def rate_template(template_id: str, user_id: str, rating: int) -> QuizTemplate |
             template.ratings_count = len(all_ratings)
 
         db.commit()
+        db.refresh(template)
 
-        return QuizTemplate(
-            id=template.id,
-            quiz_id=template.quiz_id,
-            name=template.name,
-            description=template.description,
-            category=TemplateCategory(template.category),
-            author_id=template.author_id,
-            author_name=template.author_name,
-            questions_count=template.questions_count,
-            uses_count=template.uses_count,
-            rating=template.rating,
-            ratings_count=template.ratings_count,
-            created_at=template.created_at.isoformat(),
-            tags=template.tags or [],
-            is_private=template.is_private or False
-        )
+        return _build_template(template, db)
     finally:
         db.close()
 
@@ -309,7 +286,9 @@ def update_template(
     category: TemplateCategory | None = None,
     tags: list[str] | None = None,
     is_private: bool | None = None,
-    passcode: str | None = None
+    passcode: str | None = None,
+    visibility: str | None = None,
+    group_id: str | None = None
 ) -> QuizTemplate | None:
     """Update a template (only by author)."""
     db = SessionLocal()
@@ -335,25 +314,24 @@ def update_template(
         elif passcode is not None and template.is_private:
             template.passcode = passcode
 
+        if visibility is not None:
+            template.visibility = visibility
+            # Sync is_private for backward compat
+            if visibility == "private":
+                template.is_private = True
+            elif visibility == "public":
+                template.is_private = False
+                template.passcode = None
+            elif visibility == "group":
+                template.is_private = False
+                template.passcode = None
+        if group_id is not None:
+            template.group_id = group_id
+
         db.commit()
         db.refresh(template)
 
-        return QuizTemplate(
-            id=template.id,
-            quiz_id=template.quiz_id,
-            name=template.name,
-            description=template.description,
-            category=TemplateCategory(template.category),
-            author_id=template.author_id,
-            author_name=template.author_name,
-            questions_count=template.questions_count,
-            uses_count=template.uses_count,
-            rating=template.rating,
-            ratings_count=template.ratings_count,
-            created_at=template.created_at.isoformat(),
-            tags=template.tags or [],
-            is_private=template.is_private or False
-        )
+        return _build_template(template, db)
     finally:
         db.close()
 
@@ -376,29 +354,28 @@ def delete_template(template_id: str, user_id: str) -> bool:
         db.close()
 
 
-def get_featured_templates(limit: int = 6) -> list[QuizTemplate]:
+def get_featured_templates(limit: int = 6, user_id: str | None = None) -> list[QuizTemplate]:
     """Get featured templates (high rating + many uses)."""
     db = SessionLocal()
     try:
         templates = db.query(TemplateDB).all()
+
+        # Get user's group IDs for group template filtering
+        user_group_ids = set()
+        if user_id:
+            memberships = db.query(GroupMemberDB).filter(GroupMemberDB.user_id == user_id).all()
+            user_group_ids = {m.group_id for m in memberships}
+
         result = []
         for t in templates:
-            result.append(QuizTemplate(
-                id=t.id,
-                quiz_id=t.quiz_id,
-                name=t.name,
-                description=t.description,
-                category=TemplateCategory(t.category),
-                author_id=t.author_id,
-                author_name=t.author_name,
-                questions_count=t.questions_count,
-                uses_count=t.uses_count,
-                rating=t.rating,
-                ratings_count=t.ratings_count,
-                created_at=t.created_at.isoformat(),
-                tags=t.tags or [],
-                is_private=t.is_private or False
-            ))
+            visibility = _get_visibility(t)
+            if visibility in ("public", "private"):
+                result.append(_build_template(t, db))
+            elif visibility == "group":
+                if t.group_id and t.group_id in user_group_ids:
+                    result.append(_build_template(t, db))
+            else:
+                result.append(_build_template(t, db))
 
         # Score = rating * log(uses + 1)
         result.sort(

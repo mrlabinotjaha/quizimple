@@ -36,6 +36,8 @@ class UserDB(Base):
     # Relationships
     quizzes = relationship("QuizDB", back_populates="owner", cascade="all, delete-orphan")
     templates = relationship("TemplateDB", back_populates="author", cascade="all, delete-orphan")
+    owned_groups = relationship("GroupDB", back_populates="owner", cascade="all, delete-orphan")
+    group_memberships = relationship("GroupMemberDB", back_populates="user", cascade="all, delete-orphan")
 
 
 class QuizDB(Base):
@@ -90,6 +92,8 @@ class TemplateDB(Base):
     tags = Column(JSON, default=list)
     is_private = Column(Boolean, default=False)
     passcode = Column(String, nullable=True)
+    visibility = Column(String, default="public")  # "public", "private", "group"
+    group_id = Column(String, ForeignKey("groups.id"), nullable=True)
 
     # Relationships
     author = relationship("UserDB", back_populates="templates")
@@ -108,6 +112,33 @@ class TemplateRatingDB(Base):
     template = relationship("TemplateDB", back_populates="ratings")
 
 
+class GroupDB(Base):
+    __tablename__ = "groups"
+
+    id = Column(String, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    owner_id = Column(String, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    owner = relationship("UserDB", back_populates="owned_groups")
+    members = relationship("GroupMemberDB", back_populates="group", cascade="all, delete-orphan")
+
+
+class GroupMemberDB(Base):
+    __tablename__ = "group_members"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    group_id = Column(String, ForeignKey("groups.id"), nullable=False)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    role = Column(String, default="member")  # "owner" or "member"
+    joined_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    group = relationship("GroupDB", back_populates="members")
+    user = relationship("UserDB", back_populates="group_memberships")
+
+
 def _migrate_db():
     """Add missing columns to existing tables."""
     inspector = inspect(engine)
@@ -118,6 +149,10 @@ def _migrate_db():
                 conn.execute(text("ALTER TABLE templates ADD COLUMN is_private BOOLEAN DEFAULT FALSE"))
             if "passcode" not in columns:
                 conn.execute(text("ALTER TABLE templates ADD COLUMN passcode VARCHAR"))
+            if "visibility" not in columns:
+                conn.execute(text("ALTER TABLE templates ADD COLUMN visibility VARCHAR DEFAULT 'public'"))
+            if "group_id" not in columns:
+                conn.execute(text("ALTER TABLE templates ADD COLUMN group_id VARCHAR"))
 
 
 def init_db():

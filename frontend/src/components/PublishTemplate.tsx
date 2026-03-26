@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   X,
   Share2,
@@ -8,9 +8,10 @@ import {
   Plus,
   Sparkles,
   Lock,
-  Globe
+  Globe,
+  Users
 } from 'lucide-react';
-import { Quiz, QuizTemplate, TemplateCategory } from '../types';
+import { Quiz, QuizTemplate, TemplateCategory, Group } from '../types';
 import { API_URL } from '../config';
 
 interface PublishTemplateProps {
@@ -40,10 +41,25 @@ export function PublishTemplate({ quiz, token, onClose, onPublished, existingTem
   const [category, setCategory] = useState<TemplateCategory>(existingTemplate?.category || 'other');
   const [tagInput, setTagInput] = useState('');
   const [tags, setTags] = useState<string[]>(existingTemplate?.tags || []);
-  const [isPrivate, setIsPrivate] = useState(existingTemplate?.is_private || false);
+  const [visibility, setVisibility] = useState<'public' | 'private' | 'group'>(existingTemplate?.visibility || 'public');
   const [passcode, setPasscode] = useState('');
+  const [selectedGroupId, setSelectedGroupId] = useState<string>(existingTemplate?.group_id || '');
+  const [groups, setGroups] = useState<Group[]>([]);
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    fetchGroups();
+  }, []);
+
+  const fetchGroups = async () => {
+    try {
+      const res = await fetch(`${API_URL}/groups`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) setGroups(await res.json());
+    } catch {}
+  };
 
   const addTag = () => {
     const trimmed = tagInput.trim().toLowerCase();
@@ -61,21 +77,14 @@ export function PublishTemplate({ quiz, token, onClose, onPublished, existingTem
     e.preventDefault();
     setError('');
 
-    if (!name.trim()) {
-      setError('Name is required');
-      return;
+    if (!name.trim()) { setError('Name is required'); return; }
+    if (!description.trim()) { setError('Description is required'); return; }
+    if (quiz.questions.length < 1) { setError('Quiz must have at least 1 question'); return; }
+    if (visibility === 'private' && !passcode.trim() && !isEditing) {
+      setError('Passcode is required for private templates'); return;
     }
-    if (!description.trim()) {
-      setError('Description is required');
-      return;
-    }
-    if (quiz.questions.length < 1) {
-      setError('Quiz must have at least 1 question');
-      return;
-    }
-    if (isPrivate && !passcode.trim() && !isEditing) {
-      setError('Passcode is required for private templates');
-      return;
+    if (visibility === 'group' && !selectedGroupId) {
+      setError('Please select a group'); return;
     }
 
     setPublishing(true);
@@ -91,25 +100,21 @@ export function PublishTemplate({ quiz, token, onClose, onPublished, existingTem
         description: description.trim(),
         category,
         tags,
-        is_private: isPrivate,
-        passcode: isPrivate ? passcode.trim() || null : null
+        visibility,
+        is_private: visibility === 'private',
+        passcode: visibility === 'private' ? passcode.trim() || null : null,
+        group_id: visibility === 'group' ? selectedGroupId : null
       };
 
       const res = await fetch(url, {
         method,
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(body)
       });
 
       if (!res.ok) {
         let message = isEditing ? 'Failed to update template' : 'Failed to publish template';
-        try {
-          const data = await res.json();
-          message = data.detail || message;
-        } catch {}
+        try { const data = await res.json(); message = data.detail || message; } catch {}
         throw new Error(message);
       }
 
@@ -125,10 +130,7 @@ export function PublishTemplate({ quiz, token, onClose, onPublished, existingTem
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-white dark:bg-[#1A1A1F] rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl">
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 p-2 hover:bg-[#1E1E2E]/5 dark:hover:bg-white/10 rounded-xl transition-colors"
-        >
+        <button onClick={onClose} className="absolute top-4 right-4 p-2 hover:bg-[#1E1E2E]/5 dark:hover:bg-white/10 rounded-xl transition-colors">
           <X className="w-5 h-5 text-[#1E1E2E] dark:text-white" />
         </button>
 
@@ -190,9 +192,7 @@ export function PublishTemplate({ quiz, token, onClose, onPublished, existingTem
                 className="w-full px-4 py-3 bg-[#FFFBF7] dark:bg-[#0D0D0F] border border-[#1E1E2E]/10 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF6B4A]/30 focus:border-[#FF6B4A] text-[#1E1E2E] dark:text-white"
               >
                 {categories.map((cat) => (
-                  <option key={cat.value} value={cat.value}>
-                    {cat.label}
-                  </option>
+                  <option key={cat.value} value={cat.value}>{cat.label}</option>
                 ))}
               </select>
             </div>
@@ -213,30 +213,16 @@ export function PublishTemplate({ quiz, token, onClose, onPublished, existingTem
                   placeholder="Add a tag"
                   disabled={tags.length >= 5}
                 />
-                <button
-                  type="button"
-                  onClick={addTag}
-                  disabled={tags.length >= 5}
-                  className="px-4 py-3 bg-[#1E1E2E] dark:bg-white text-white dark:text-[#1E1E2E] rounded-xl hover:bg-[#2E2E3E] dark:hover:bg-white/90 transition-colors disabled:opacity-50"
-                >
+                <button type="button" onClick={addTag} disabled={tags.length >= 5} className="px-4 py-3 bg-[#1E1E2E] dark:bg-white text-white dark:text-[#1E1E2E] rounded-xl hover:bg-[#2E2E3E] dark:hover:bg-white/90 transition-colors disabled:opacity-50">
                   <Plus className="w-5 h-5" />
                 </button>
               </div>
               {tags.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                   {tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="px-3 py-1 bg-[#1E1E2E]/5 dark:bg-white/10 rounded-full text-sm text-[#1E1E2E]/70 dark:text-white/70 flex items-center gap-1"
-                    >
+                    <span key={tag} className="px-3 py-1 bg-[#1E1E2E]/5 dark:bg-white/10 rounded-full text-sm text-[#1E1E2E]/70 dark:text-white/70 flex items-center gap-1">
                       #{tag}
-                      <button
-                        type="button"
-                        onClick={() => removeTag(tag)}
-                        className="hover:text-[#FF6B4A]"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
+                      <button type="button" onClick={() => removeTag(tag)} className="hover:text-[#FF6B4A]"><X className="w-3 h-3" /></button>
                     </span>
                   ))}
                 </div>
@@ -248,12 +234,12 @@ export function PublishTemplate({ quiz, token, onClose, onPublished, existingTem
               <label className="block text-sm font-medium text-[#1E1E2E] dark:text-white mb-3">
                 Visibility
               </label>
-              <div className="flex gap-3">
+              <div className="grid grid-cols-3 gap-2">
                 <button
                   type="button"
-                  onClick={() => setIsPrivate(false)}
-                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border-2 font-medium text-sm transition-all ${
-                    !isPrivate
+                  onClick={() => setVisibility('public')}
+                  className={`flex items-center justify-center gap-1.5 py-3 rounded-xl border-2 font-medium text-sm transition-all ${
+                    visibility === 'public'
                       ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
                       : 'border-[#1E1E2E]/10 dark:border-white/10 text-[#1E1E2E]/50 dark:text-white/50 hover:border-[#1E1E2E]/20 dark:hover:border-white/20'
                   }`}
@@ -263,9 +249,9 @@ export function PublishTemplate({ quiz, token, onClose, onPublished, existingTem
                 </button>
                 <button
                   type="button"
-                  onClick={() => setIsPrivate(true)}
-                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border-2 font-medium text-sm transition-all ${
-                    isPrivate
+                  onClick={() => setVisibility('private')}
+                  className={`flex items-center justify-center gap-1.5 py-3 rounded-xl border-2 font-medium text-sm transition-all ${
+                    visibility === 'private'
                       ? 'border-amber-500 bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400'
                       : 'border-[#1E1E2E]/10 dark:border-white/10 text-[#1E1E2E]/50 dark:text-white/50 hover:border-[#1E1E2E]/20 dark:hover:border-white/20'
                   }`}
@@ -273,8 +259,21 @@ export function PublishTemplate({ quiz, token, onClose, onPublished, existingTem
                   <Lock className="w-4 h-4" />
                   Private
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setVisibility('group')}
+                  className={`flex items-center justify-center gap-1.5 py-3 rounded-xl border-2 font-medium text-sm transition-all ${
+                    visibility === 'group'
+                      ? 'border-violet-500 bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-400'
+                      : 'border-[#1E1E2E]/10 dark:border-white/10 text-[#1E1E2E]/50 dark:text-white/50 hover:border-[#1E1E2E]/20 dark:hover:border-white/20'
+                  }`}
+                >
+                  <Users className="w-4 h-4" />
+                  Group
+                </button>
               </div>
-              {isPrivate && (
+
+              {visibility === 'private' && (
                 <div className="mt-3">
                   <input
                     type="text"
@@ -285,6 +284,30 @@ export function PublishTemplate({ quiz, token, onClose, onPublished, existingTem
                   />
                   <p className="text-xs text-[#1E1E2E]/40 dark:text-white/40 mt-1.5">
                     Share this passcode with people you want to access the template
+                  </p>
+                </div>
+              )}
+
+              {visibility === 'group' && (
+                <div className="mt-3">
+                  {groups.length === 0 ? (
+                    <p className="text-sm text-[#1E1E2E]/50 dark:text-white/50 p-3 bg-[#FFFBF7] dark:bg-[#0D0D0F] rounded-xl">
+                      No groups yet. Create one in the Groups page first.
+                    </p>
+                  ) : (
+                    <select
+                      value={selectedGroupId}
+                      onChange={(e) => setSelectedGroupId(e.target.value)}
+                      className="w-full px-4 py-3 bg-[#FFFBF7] dark:bg-[#0D0D0F] border border-[#1E1E2E]/10 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 text-[#1E1E2E] dark:text-white"
+                    >
+                      <option value="">Select a group</option>
+                      {groups.map((g) => (
+                        <option key={g.id} value={g.id}>{g.name} ({g.member_count} members)</option>
+                      ))}
+                    </select>
+                  )}
+                  <p className="text-xs text-[#1E1E2E]/40 dark:text-white/40 mt-1.5">
+                    Only members of this group will see this template
                   </p>
                 </div>
               )}
@@ -309,15 +332,9 @@ export function PublishTemplate({ quiz, token, onClose, onPublished, existingTem
               className="w-full py-4 bg-gradient-to-r from-violet-500 to-purple-600 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-violet-500/30 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {publishing ? (
-                <>
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  {isEditing ? 'Updating...' : 'Publishing...'}
-                </>
+                <><div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />{isEditing ? 'Updating...' : 'Publishing...'}</>
               ) : (
-                <>
-                  <Share2 className="w-5 h-5" />
-                  {isEditing ? 'Update Template' : 'Publish Template'}
-                </>
+                <><Share2 className="w-5 h-5" />{isEditing ? 'Update Template' : 'Publish Template'}</>
               )}
             </button>
           </form>

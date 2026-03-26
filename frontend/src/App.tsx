@@ -13,6 +13,7 @@ import { TemplateMarket } from '@/components/TemplateMarket';
 import { QuizDetail } from '@/components/QuizDetail';
 import { CreateQuiz } from '@/components/CreateQuiz';
 import { Settings } from '@/components/Settings';
+import { Groups } from '@/components/Groups';
 import { API_URL } from '@/config';
 import '@/styles/index.css';
 
@@ -278,6 +279,12 @@ function EditQuizPage() {
   );
 }
 
+// Groups page wrapper
+function GroupsPage() {
+  const navigate = useNavigate();
+  return <Groups onBack={() => navigate('/')} />;
+}
+
 // Settings page wrapper
 function SettingsPage() {
   const navigate = useNavigate();
@@ -365,6 +372,7 @@ function HomePage() {
       onCreateQuiz={() => navigate('/create-quiz')}
       onEditQuiz={(quiz) => navigate(`/quiz/${quiz.id}/edit`)}
       onJoinQuiz={() => navigate('/join')}
+      onGroups={() => navigate('/groups')}
       onSettings={() => navigate('/settings')}
     />
   );
@@ -379,6 +387,7 @@ function AppRoutes() {
       <Route path="/join" element={<JoinPage />} />
       <Route path="/templates" element={<TemplatesPage />} />
       <Route path="/create-quiz" element={<RequireAuth><CreateQuizPage /></RequireAuth>} />
+      <Route path="/groups" element={<RequireAuth><GroupsPage /></RequireAuth>} />
       <Route path="/settings" element={<RequireAuth><SettingsPage /></RequireAuth>} />
       <Route path="/quiz/:quizId" element={<RequireAuth><QuizDetailPage /></RequireAuth>} />
       <Route path="/quiz/:quizId/edit" element={<RequireAuth><EditQuizPage /></RequireAuth>} />

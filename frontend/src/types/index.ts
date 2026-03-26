@@ -174,4 +174,16 @@ export interface QuizTemplate {
   created_at: string;
   tags: string[];
   is_private: boolean;
+  visibility: 'public' | 'private' | 'group';
+  group_id?: string;
+  group_name?: string;
+}
+
+export interface Group {
+  id: string;
+  name: string;
+  owner_id: string;
+  created_at: string;
+  member_count: number;
+  members: { id: string; username: string; role: string }[];
 }
