@@ -29,19 +29,12 @@ export function LandingPage({ onGetStarted, onLogin, onTemplateMarket, onJoinQui
   useEffect(() => {
     setIsLoaded(true);
     const interval = setInterval(() => {
-      setActiveFeature(prev => (prev + 1) % 6);
+      setActiveFeature(prev => (prev + 1) % 5);
     }, 3000);
     return () => clearInterval(interval);
   }, []);
 
   const features = [
-    {
-      icon: Sparkles,
-      title: 'AI-Powered',
-      subtitle: 'Question Generation',
-      description: 'Describe your topic, get professional quiz questions instantly. Our AI understands context and creates engaging, relevant questions.',
-      accent: 'from-amber-400 to-orange-500'
-    },
     {
       icon: Users,
       title: 'Real-time',
@@ -102,7 +95,7 @@ export function LandingPage({ onGetStarted, onLogin, onTemplateMarket, onJoinQui
             </div>
 
             <div className="hidden md:flex items-center gap-1">
-              {['Features', 'Benefits', 'Pricing'].map((item) => (
+              {['Features', 'Benefits'].map((item) => (
                 <a
                   key={item}
                   href={`#${item.toLowerCase()}`}
@@ -150,7 +143,7 @@ export function LandingPage({ onGetStarted, onLogin, onTemplateMarket, onJoinQui
                   <span className="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-[#FF6B4A] opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-[#FF6B4A]"></span>
                 </span>
-                <span className="text-sm font-medium text-[#1E1E2E]/70 dark:text-white/70">AI-Powered Quiz Platform</span>
+                <span className="text-sm font-medium text-[#1E1E2E]/70 dark:text-white/70">Interactive Quiz Platform</span>
               </div>
 
               <h1 className="text-5xl sm:text-6xl lg:text-7xl font-normal text-[#1E1E2E] dark:text-white leading-[1.1] mb-8" style={{ fontFamily: "'Instrument Serif', serif" }}>
@@ -299,8 +292,8 @@ export function LandingPage({ onGetStarted, onLogin, onTemplateMarket, onJoinQui
                       <Sparkles className="w-5 h-5 text-violet-500 dark:text-violet-400" />
                     </div>
                     <div>
-                      <p className="font-medium text-[#1E1E2E] dark:text-white text-sm">AI Generated!</p>
-                      <p className="text-xs text-[#1E1E2E]/50 dark:text-white/50">12 questions ready</p>
+                      <p className="font-medium text-[#1E1E2E] dark:text-white text-sm">Questions Ready!</p>
+                      <p className="text-xs text-[#1E1E2E]/50 dark:text-white/50">12 questions imported</p>
                     </div>
                   </div>
                 </div>
@@ -532,8 +525,8 @@ export function LandingPage({ onGetStarted, onLogin, onTemplateMarket, onJoinQui
                     icon: '🎮'
                   },
                   {
-                    title: 'Save Hours with AI',
-                    description: 'Generate professional quiz content in seconds, not hours. Focus on teaching, not typing.',
+                    title: 'Save Hours with Templates',
+                    description: 'Use community templates or share your own with groups. Focus on teaching, not building from scratch.',
                     icon: '⚡'
                   },
                   {
@@ -554,102 +547,6 @@ export function LandingPage({ onGetStarted, onLogin, onTemplateMarket, onJoinQui
                 ))}
               </div>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Pricing Section */}
-      <section id="pricing" className="py-24 px-6 lg:px-8 bg-[#FFFBF7] dark:bg-[#0D0D0F]">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <span className="inline-block px-4 py-2 bg-[#1E1E2E]/5 dark:bg-white/10 rounded-full text-[#1E1E2E]/60 dark:text-white/60 text-sm font-medium mb-6">
-              Simple Pricing
-            </span>
-            <h2 className="text-4xl sm:text-5xl font-normal text-[#1E1E2E] dark:text-white mb-6" style={{ fontFamily: "'Instrument Serif', serif" }}>
-              Start free, scale as
-              <br />
-              <span className="italic">you grow</span>
-            </h2>
-            <p className="text-lg text-[#1E1E2E]/60 dark:text-white/60 max-w-2xl mx-auto">
-              No hidden fees. No credit card required. Upgrade anytime.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-            {/* Free Plan */}
-            <div className="bg-white dark:bg-[#1A1A1F] rounded-3xl p-8 border border-[#1E1E2E]/10 dark:border-white/10 hover:border-[#1E1E2E]/20 dark:hover:border-white/20 transition-all hover:shadow-xl dark:hover:shadow-black/20">
-              <div className="mb-8">
-                <h3 className="text-xl font-semibold text-[#1E1E2E] dark:text-white mb-2">Starter</h3>
-                <p className="text-[#1E1E2E]/50 dark:text-white/50 text-sm">Perfect for getting started</p>
-              </div>
-              <div className="mb-8">
-                <span className="text-5xl font-bold text-[#1E1E2E] dark:text-white" style={{ fontFamily: "'Instrument Serif', serif" }}>$0</span>
-                <span className="text-[#1E1E2E]/50 dark:text-white/50">/month</span>
-              </div>
-              <button
-                onClick={onGetStarted}
-                className="w-full py-4 bg-[#1E1E2E]/5 dark:bg-white/10 hover:bg-[#1E1E2E]/10 dark:hover:bg-white/20 text-[#1E1E2E] dark:text-white font-semibold rounded-2xl transition-colors mb-8"
-              >
-                Get Started
-              </button>
-              <div className="space-y-4">
-                {[
-                  'Up to 5 quizzes',
-                  '10 participants per session',
-                  'Basic analytics',
-                  'JSON import',
-                  'Community templates'
-                ].map((feature, i) => (
-                  <div key={i} className="flex items-center gap-3">
-                    <div className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center">
-                      <Check className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-                    </div>
-                    <span className="text-[#1E1E2E]/70 dark:text-white/70">{feature}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Pro Plan */}
-            <div className="relative bg-[#1E1E2E] dark:bg-white rounded-3xl p-8 text-white dark:text-[#1E1E2E] transform hover:scale-[1.02] transition-all hover:shadow-2xl">
-              <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                <div className="px-4 py-1.5 bg-gradient-to-r from-[#FF6B4A] to-[#FF8F6B] text-white text-sm font-semibold rounded-full">
-                  Most Popular
-                </div>
-              </div>
-              <div className="mb-8">
-                <h3 className="text-xl font-semibold mb-2">Pro</h3>
-                <p className="text-white/50 dark:text-[#1E1E2E]/50 text-sm">For educators & trainers</p>
-              </div>
-              <div className="mb-8">
-                <span className="text-5xl font-bold" style={{ fontFamily: "'Instrument Serif', serif" }}>$15</span>
-                <span className="text-white/50 dark:text-[#1E1E2E]/50">/month</span>
-              </div>
-              <button
-                onClick={onGetStarted}
-                className="w-full py-4 bg-gradient-to-r from-[#FF6B4A] to-[#FF8F6B] text-white font-semibold rounded-2xl transition-all hover:shadow-lg hover:shadow-[#FF6B4A]/30 mb-8"
-              >
-                Start Free Trial
-              </button>
-              <div className="space-y-4">
-                {[
-                  'Unlimited quizzes',
-                  '100 participants per session',
-                  'AI question generation',
-                  'Advanced analytics',
-                  'Priority support',
-                  'Publish to template market'
-                ].map((feature, i) => (
-                  <div key={i} className="flex items-center gap-3">
-                    <div className="w-5 h-5 rounded-full bg-[#FF6B4A] flex items-center justify-center">
-                      <Check className="w-3 h-3 text-white" />
-                    </div>
-                    <span className="text-white/80 dark:text-[#1E1E2E]/80">{feature}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
           </div>
         </div>
       </section>
@@ -680,10 +577,6 @@ export function LandingPage({ onGetStarted, onLogin, onTemplateMarket, onJoinQui
               Start Creating — Free
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </button>
-            <button className="px-10 py-5 text-white/80 hover:text-white font-medium transition-colors flex items-center gap-2">
-              <Play className="w-5 h-5" />
-              Watch 2-min demo
-            </button>
           </div>
         </div>
       </section>
@@ -708,7 +601,7 @@ export function LandingPage({ onGetStarted, onLogin, onTemplateMarket, onJoinQui
             {[
               {
                 title: 'Product',
-                links: ['Features', 'Pricing', 'Templates', 'Integrations']
+                links: ['Features', 'Templates', 'Groups']
               },
               {
                 title: 'Resources',
