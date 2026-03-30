@@ -3,24 +3,17 @@ import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { Quiz, QuizTemplate } from '@/types';
 import { PublishTemplate } from './PublishTemplate';
-import { ThemeToggle } from './ThemeToggle';
 import { ConfirmModal } from './ConfirmModal';
 import { API_URL } from '@/config';
 import {
-  LogOut,
   Plus,
   Play,
   Pencil,
   Trash2,
-  Store,
   Share2,
   BarChart3,
-  Zap,
-  Users,
   Clock,
-  User,
-  Settings,
-  ChevronDown,
+  Users,
   Lock,
   Globe
 } from 'lucide-react';
@@ -37,13 +30,12 @@ interface HomeProps {
 }
 
 export function Home({ onEnterRoom, onTemplateMarket, onViewQuizDetail, onCreateQuiz, onEditQuiz, onJoinQuiz, onSettings, onGroups }: HomeProps) {
-  const { user, token, logout } = useAuth();
+  const { token } = useAuth();
   const { showToast } = useToast();
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [publishingQuiz, setPublishingQuiz] = useState<Quiz | null>(null);
   const [deletingQuiz, setDeletingQuiz] = useState<Quiz | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [userTemplates, setUserTemplates] = useState<QuizTemplate[]>([]);
 
   useEffect(() => {
@@ -124,114 +116,7 @@ export function Home({ onEnterRoom, onTemplateMarket, onViewQuizDetail, onCreate
 
   return (
     <div className="min-h-screen bg-[#FFFBF7] dark:bg-[#0D0D0F] transition-colors" style={{ fontFamily: "'DM Sans', sans-serif" }}>
-      {/* Header */}
-      <header className="bg-white dark:bg-[#1A1A1F] border-b border-[#1E1E2E]/10 dark:border-white/10 sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-[#FF6B4A] to-[#FF8F6B] rounded-xl flex items-center justify-center shadow-lg shadow-[#FF6B4A]/20">
-                <Zap className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-2xl font-semibold text-[#1E1E2E] dark:text-white" style={{ fontFamily: "'Instrument Serif', serif" }}>
-                Quizimple
-              </span>
-            </div>
-            <div className="flex items-center gap-4">
-              {onJoinQuiz && (
-                <button
-                  onClick={onJoinQuiz}
-                  className="flex items-center gap-2 px-4 py-2.5 text-[#1E1E2E]/60 dark:text-white/60 hover:text-[#1E1E2E] dark:hover:text-white font-medium text-sm transition-colors"
-                >
-                  <Users className="w-4 h-4" />
-                  Join Quiz
-                </button>
-              )}
-              {onTemplateMarket && (
-                <button
-                  onClick={onTemplateMarket}
-                  className="flex items-center gap-2 px-4 py-2.5 text-[#1E1E2E]/60 dark:text-white/60 hover:text-[#1E1E2E] dark:hover:text-white font-medium text-sm transition-colors"
-                >
-                  <Store className="w-4 h-4" />
-                  Templates
-                </button>
-              )}
-              {onGroups && (
-                <button
-                  onClick={onGroups}
-                  className="flex items-center gap-2 px-4 py-2.5 text-[#1E1E2E]/60 dark:text-white/60 hover:text-[#1E1E2E] dark:hover:text-white font-medium text-sm transition-colors"
-                >
-                  <Users className="w-4 h-4" />
-                  Groups
-                </button>
-              )}
-              <ThemeToggle />
-
-              {/* Profile Dropdown */}
-              <div className="relative">
-                <button
-                  onClick={() => setShowProfileMenu(!showProfileMenu)}
-                  className="flex items-center gap-2 px-3 py-2 text-[#1E1E2E]/70 dark:text-white/70 hover:text-[#1E1E2E] dark:hover:text-white font-medium text-sm border border-[#1E1E2E]/10 dark:border-white/10 rounded-xl hover:bg-[#1E1E2E]/5 dark:hover:bg-white/10 transition-colors"
-                >
-                  <div className="w-7 h-7 bg-gradient-to-br from-[#FF6B4A] to-[#FF8F6B] rounded-lg flex items-center justify-center">
-                    <User className="w-4 h-4 text-white" />
-                  </div>
-                  <span className="max-w-[120px] truncate">{user?.username || user?.email}</span>
-                  <ChevronDown className={`w-4 h-4 transition-transform ${showProfileMenu ? 'rotate-180' : ''}`} />
-                </button>
-
-                {showProfileMenu && (
-                  <>
-                    {/* Backdrop to close menu */}
-                    <div
-                      className="fixed inset-0 z-10"
-                      onClick={() => setShowProfileMenu(false)}
-                    />
-
-                    {/* Dropdown Menu */}
-                    <div className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-[#1A1A1F] rounded-xl border border-[#1E1E2E]/10 dark:border-white/10 shadow-xl dark:shadow-black/30 z-20 overflow-hidden animate-scale-in">
-                      {/* User Info */}
-                      <div className="px-4 py-3 border-b border-[#1E1E2E]/10 dark:border-white/10">
-                        <p className="font-medium text-[#1E1E2E] dark:text-white truncate">
-                          {user?.username || 'User'}
-                        </p>
-                        <p className="text-sm text-[#1E1E2E]/50 dark:text-white/50 truncate">
-                          {user?.email}
-                        </p>
-                      </div>
-
-                      {/* Menu Items */}
-                      <div className="py-1">
-                        <button
-                          onClick={() => {
-                            setShowProfileMenu(false);
-                            onSettings?.();
-                          }}
-                          className="w-full flex items-center gap-3 px-4 py-2.5 text-[#1E1E2E]/70 dark:text-white/70 hover:text-[#1E1E2E] dark:hover:text-white hover:bg-[#1E1E2E]/5 dark:hover:bg-white/10 transition-colors text-sm"
-                        >
-                          <Settings className="w-4 h-4" />
-                          Settings
-                        </button>
-                        <button
-                          onClick={() => {
-                            setShowProfileMenu(false);
-                            logout();
-                          }}
-                          className="w-full flex items-center gap-3 px-4 py-2.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors text-sm"
-                        >
-                          <LogOut className="w-4 h-4" />
-                          Logout
-                        </button>
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <div className="max-w-6xl mx-auto px-6 py-8 space-y-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-8">
         {/* My Quizzes */}
         <div className="bg-white dark:bg-[#1A1A1F] rounded-2xl border border-[#1E1E2E]/5 dark:border-white/10 shadow-sm dark:shadow-black/20 overflow-hidden">
           <div className="p-6 flex items-center justify-between border-b border-[#1E1E2E]/5 dark:border-white/10">

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   X,
   Share2,
@@ -51,6 +51,9 @@ export function PublishTemplate({ quiz, token, onClose, onPublished, existingTem
   useEffect(() => {
     fetchGroups();
   }, []);
+
+  const handleEsc = useCallback((e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); }, [onClose]);
+  useEffect(() => { document.addEventListener('keydown', handleEsc); return () => document.removeEventListener('keydown', handleEsc); }, [handleEsc]);
 
   const fetchGroups = async () => {
     try {
@@ -300,7 +303,7 @@ export function PublishTemplate({ quiz, token, onClose, onPublished, existingTem
                       onChange={(e) => setSelectedGroupId(e.target.value)}
                       className="w-full px-4 py-3 bg-[#FFFBF7] dark:bg-[#0D0D0F] border border-[#1E1E2E]/10 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 text-[#1E1E2E] dark:text-white"
                     >
-                      <option value="">Select a group</option>
+                      <option value="">Select a group (e.g. Avengers)</option>
                       {groups.map((g) => (
                         <option key={g.id} value={g.id}>{g.name} ({g.member_count} members)</option>
                       ))}

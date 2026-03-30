@@ -850,14 +850,7 @@ export function CreateQuiz({ quiz: existingQuiz, onBack, onQuizCreated, onHost }
                 className="flex items-center gap-2 px-4 py-2.5 border border-[#1E1E2E]/10 dark:border-white/10 text-[#1E1E2E] dark:text-white font-medium rounded-xl hover:bg-[#1E1E2E]/5 dark:hover:bg-white/10 transition-colors"
               >
                 <Upload className="w-4 h-4" />
-                Import JSON
-              </button>
-              <button
-                onClick={() => setShowAIGenerate(true)}
-                className="flex items-center gap-2 px-4 py-2.5 border border-violet-300 dark:border-violet-400 text-violet-600 dark:text-violet-400 font-medium rounded-xl hover:bg-violet-50 dark:hover:bg-violet-500/20 transition-colors"
-              >
-                <Sparkles className="w-4 h-4" />
-                AI Generate
+                Paste JSON
               </button>
               <button
                 onClick={handlePrintQuiz}
@@ -930,7 +923,7 @@ export function CreateQuiz({ quiz: existingQuiz, onBack, onQuizCreated, onHost }
                   <div className="flex items-center gap-3">
                     <PartyPopper className={`w-4 h-4 ${funMode ? 'text-purple-500' : 'text-[#1E1E2E]/40 dark:text-white/40'}`} />
                     <div>
-                      <p className="font-medium text-[#1E1E2E] dark:text-white text-sm">Fun Mode</p>
+                      <p className="font-medium text-[#1E1E2E] dark:text-white text-sm">Fun Mode <span className="text-xs text-purple-500">(Beta)</span></p>
                       <p className="text-xs text-[#1E1E2E]/50 dark:text-white/50">
                         {funMode ? 'Chaos enabled!' : 'Random effects'}
                       </p>

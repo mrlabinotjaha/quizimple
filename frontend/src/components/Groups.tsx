@@ -1,11 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/context/ToastContext';
 import { Group } from '@/types';
-import { ThemeToggle } from './ThemeToggle';
 import { API_URL } from '@/config';
 import {
-  ArrowLeft,
   Plus,
   Users,
   Crown,
@@ -36,6 +34,9 @@ export function Groups({ onBack }: GroupsProps) {
   useEffect(() => {
     fetchGroups();
   }, []);
+
+  const handleEsc = useCallback((e: KeyboardEvent) => { if (e.key === 'Escape') setShowCreate(false); }, []);
+  useEffect(() => { document.addEventListener('keydown', handleEsc); return () => document.removeEventListener('keydown', handleEsc); }, [handleEsc]);
 
   const fetchGroups = async () => {
     try {
@@ -147,35 +148,22 @@ export function Groups({ onBack }: GroupsProps) {
 
   return (
     <div className="min-h-screen bg-[#FFFBF7] dark:bg-[#0D0D0F] transition-colors" style={{ fontFamily: "'DM Sans', sans-serif" }}>
-      <header className="bg-white dark:bg-[#1A1A1F] border-b border-[#1E1E2E]/10 dark:border-white/10 sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button onClick={onBack} className="p-2 hover:bg-[#1E1E2E]/5 dark:hover:bg-white/10 rounded-xl transition-colors">
-                <ArrowLeft className="w-5 h-5 text-[#1E1E2E] dark:text-white" />
-              </button>
-              <div>
-                <h1 className="text-2xl font-semibold text-[#1E1E2E] dark:text-white" style={{ fontFamily: "'Instrument Serif', serif" }}>
-                  Groups
-                </h1>
-                <p className="text-sm text-[#1E1E2E]/50 dark:text-white/50">Manage your company & team groups</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <ThemeToggle />
-              <button
-                onClick={() => setShowCreate(true)}
-                className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#FF6B4A] to-[#FF8F6B] text-white font-medium rounded-xl hover:shadow-lg hover:shadow-[#FF6B4A]/30 transition-all"
-              >
-                <Plus className="w-4 h-4" />
-                New Group
-              </button>
-            </div>
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-semibold text-[#1E1E2E] dark:text-white" style={{ fontFamily: "'Instrument Serif', serif" }}>
+              Groups
+            </h1>
+            <p className="text-sm text-[#1E1E2E]/50 dark:text-white/50">Manage your company & team groups</p>
           </div>
+          <button
+            onClick={() => setShowCreate(true)}
+            className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-[#FF6B4A] to-[#FF8F6B] text-white font-medium rounded-xl hover:shadow-lg hover:shadow-[#FF6B4A]/30 transition-all"
+          >
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">New Group</span>
+          </button>
         </div>
-      </header>
-
-      <div className="max-w-4xl mx-auto px-6 py-8">
         {loading ? (
           <div className="text-center py-16">
             <div className="w-8 h-8 border-4 border-[#FF6B4A] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
@@ -312,7 +300,7 @@ export function Groups({ onBack }: GroupsProps) {
                 type="text"
                 value={newGroupName}
                 onChange={(e) => setNewGroupName(e.target.value)}
-                placeholder="Group name (e.g. Xponentl)"
+                placeholder="Group name (e.g. Avengers)"
                 className="w-full px-4 py-3 bg-[#FFFBF7] dark:bg-[#0D0D0F] border border-[#1E1E2E]/10 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 text-[#1E1E2E] dark:text-white placeholder:text-[#1E1E2E]/40 dark:placeholder:text-white/40 mb-4"
                 autoFocus
               />

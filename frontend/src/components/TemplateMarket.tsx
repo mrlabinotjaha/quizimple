@@ -25,6 +25,7 @@ import {
   Users
 } from 'lucide-react';
 import { QuizTemplate, TemplateCategory, Question, Group } from '../types';
+import { useAuth } from '../context/AuthContext';
 import { API_URL } from '../config';
 
 interface TemplateDetails extends QuizTemplate {
@@ -51,6 +52,7 @@ const categoryConfig: Record<TemplateCategory, { label: string; icon: any; color
 };
 
 export function TemplateMarket({ token, onBack, onUseTemplate, onLogin }: TemplateMarketProps) {
+  const { user } = useAuth();
   const [templates, setTemplates] = useState<QuizTemplate[]>([]);
   const [userGroups, setUserGroups] = useState<Group[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
@@ -73,19 +75,18 @@ export function TemplateMarket({ token, onBack, onUseTemplate, onLogin }: Templa
   const [unlockError, setUnlockError] = useState('');
   const [unlockedTemplates, setUnlockedTemplates] = useState<Map<string, string>>(new Map());
 
-  // Close modal on ESC key
+  // Close any open modal on ESC key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && selectedTemplate) {
-        setSelectedTemplate(null);
-        setTemplateDetails(null);
-        setExpandedQuestions(new Set());
-      }
+      if (e.key !== 'Escape') return;
+      if (passcodePrompt) { setPasscodePrompt(null); return; }
+      if (unlockPrompt) { setUnlockPrompt(null); return; }
+      if (selectedTemplate) { setSelectedTemplate(null); setTemplateDetails(null); setExpandedQuestions(new Set()); return; }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [selectedTemplate]);
+  }, [selectedTemplate, passcodePrompt, unlockPrompt]);
 
   // Fetch template details when modal opens
   useEffect(() => {
@@ -278,7 +279,7 @@ export function TemplateMarket({ token, onBack, onUseTemplate, onLogin }: Templa
     }
 
     try {
-      await fetch(`${API_URL}/templates/${templateId}/rate`, {
+      const res = await fetch(`${API_URL}/templates/${templateId}/rate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -286,6 +287,13 @@ export function TemplateMarket({ token, onBack, onUseTemplate, onLogin }: Templa
         },
         body: JSON.stringify({ rating })
       });
+      if (res.ok) {
+        const updated = await res.json();
+        // Update the selected template in-place so UI reflects new rating
+        if (selectedTemplate && selectedTemplate.id === templateId) {
+          setSelectedTemplate({ ...selectedTemplate, rating: updated.rating, ratings_count: updated.ratings_count });
+        }
+      }
       fetchTemplates();
     } catch (error) {
       console.error('Failed to rate template:', error);
@@ -311,31 +319,15 @@ export function TemplateMarket({ token, onBack, onUseTemplate, onLogin }: Templa
 
   return (
     <div className="min-h-screen bg-[#FFFBF7] dark:bg-[#0D0D0F] transition-colors" style={{ fontFamily: "'DM Sans', sans-serif" }}>
-      {/* Header */}
-      <header className="bg-white dark:bg-[#1A1A1F] border-b border-[#1E1E2E]/10 dark:border-white/10 sticky top-0 z-20">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={onBack}
-                className="p-2 hover:bg-[#1E1E2E]/5 dark:hover:bg-white/10 rounded-xl transition-colors"
-              >
-                <ArrowLeft className="w-5 h-5 text-[#1E1E2E] dark:text-white" />
-              </button>
-              <div>
-                <h1 className="text-2xl font-semibold text-[#1E1E2E] dark:text-white" style={{ fontFamily: "'Instrument Serif', serif" }}>
-                  Template Market
-                </h1>
-                <p className="text-sm text-[#1E1E2E]/50 dark:text-white/50">
-                  Discover and use community-created quiz templates
-                </p>
-              </div>
-            </div>
-          </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <div className="mb-6">
+          <h1 className="text-2xl sm:text-3xl font-semibold text-[#1E1E2E] dark:text-white" style={{ fontFamily: "'Instrument Serif', serif" }}>
+            Template Market
+          </h1>
+          <p className="text-sm text-[#1E1E2E]/50 dark:text-white/50">
+            Discover and use community-created quiz templates
+          </p>
         </div>
-      </header>
-
-      <div className="max-w-7xl mx-auto px-6 py-8">
         {/* Search & Filters */}
         <div className="flex flex-col md:flex-row gap-4 mb-8">
           <div className="relative flex-1">
@@ -720,7 +712,7 @@ export function TemplateMarket({ token, onBack, onUseTemplate, onLogin }: Templa
               </div>
 
               {/* Rating */}
-              {token && (
+              {token && user && selectedTemplate.author_id !== user.id && (
                 <div className="mb-6 p-4 bg-[#FFFBF7] dark:bg-[#0D0D0F] rounded-xl">
                   <p className="text-sm font-medium text-[#1E1E2E] dark:text-white mb-2">Rate this template</p>
                   <div className="flex items-center gap-2">

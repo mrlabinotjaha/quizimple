@@ -14,6 +14,7 @@ import { QuizDetail } from '@/components/QuizDetail';
 import { CreateQuiz } from '@/components/CreateQuiz';
 import { Settings } from '@/components/Settings';
 import { Groups } from '@/components/Groups';
+import { AppHeader } from '@/components/AppHeader';
 import { API_URL } from '@/config';
 import '@/styles/index.css';
 
@@ -378,19 +379,40 @@ function HomePage() {
   );
 }
 
+// Layout with persistent header for authenticated pages
+function WithHeader({ children }: { children: React.ReactNode }) {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
+  if (!user) return <>{children}</>;
+
+  return (
+    <>
+      <AppHeader
+        onHome={() => navigate('/')}
+        onTemplateMarket={() => navigate('/templates')}
+        onGroups={() => navigate('/groups')}
+        onJoinQuiz={() => navigate('/join')}
+        onSettings={() => navigate('/settings')}
+      />
+      {children}
+    </>
+  );
+}
+
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<HomePage />} />
+      <Route path="/" element={<WithHeader><HomePage /></WithHeader>} />
       <Route path="/login" element={<RedirectIfAuth><LoginPage /></RedirectIfAuth>} />
       <Route path="/register" element={<RedirectIfAuth><RegisterPage /></RedirectIfAuth>} />
       <Route path="/join" element={<JoinPage />} />
-      <Route path="/templates" element={<TemplatesPage />} />
-      <Route path="/create-quiz" element={<RequireAuth><CreateQuizPage /></RequireAuth>} />
-      <Route path="/groups" element={<RequireAuth><GroupsPage /></RequireAuth>} />
-      <Route path="/settings" element={<RequireAuth><SettingsPage /></RequireAuth>} />
-      <Route path="/quiz/:quizId" element={<RequireAuth><QuizDetailPage /></RequireAuth>} />
-      <Route path="/quiz/:quizId/edit" element={<RequireAuth><EditQuizPage /></RequireAuth>} />
+      <Route path="/templates" element={<WithHeader><TemplatesPage /></WithHeader>} />
+      <Route path="/create-quiz" element={<RequireAuth><WithHeader><CreateQuizPage /></WithHeader></RequireAuth>} />
+      <Route path="/groups" element={<RequireAuth><WithHeader><GroupsPage /></WithHeader></RequireAuth>} />
+      <Route path="/settings" element={<RequireAuth><WithHeader><SettingsPage /></WithHeader></RequireAuth>} />
+      <Route path="/quiz/:quizId" element={<RequireAuth><WithHeader><QuizDetailPage /></WithHeader></RequireAuth>} />
+      <Route path="/quiz/:quizId/edit" element={<RequireAuth><WithHeader><EditQuizPage /></WithHeader></RequireAuth>} />
       <Route path="/room/:roomCode" element={<RoomPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
