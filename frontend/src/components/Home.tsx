@@ -12,6 +12,7 @@ import {
   Trash2,
   Share2,
   BarChart3,
+  Zap,
   Clock,
   Users,
   Lock,
@@ -29,7 +30,7 @@ interface HomeProps {
   onGroups?: () => void;
 }
 
-export function Home({ onEnterRoom, onTemplateMarket, onViewQuizDetail, onCreateQuiz, onEditQuiz, onJoinQuiz, onSettings, onGroups }: HomeProps) {
+export function Home({ onEnterRoom, onViewQuizDetail, onCreateQuiz, onEditQuiz }: HomeProps) {
   const { token } = useAuth();
   const { showToast } = useToast();
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);

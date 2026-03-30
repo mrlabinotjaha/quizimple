@@ -15,11 +15,7 @@ import {
   ChevronUp
 } from 'lucide-react';
 
-interface GroupsProps {
-  onBack: () => void;
-}
-
-export function Groups({ onBack }: GroupsProps) {
+export function Groups() {
   const { user, token } = useAuth();
   const { showToast } = useToast();
   const [groups, setGroups] = useState<Group[]>([]);

@@ -283,7 +283,7 @@ function EditQuizPage() {
 // Groups page wrapper
 function GroupsPage() {
   const navigate = useNavigate();
-  return <Groups onBack={() => navigate('/')} />;
+  return <Groups />;
 }
 
 // Settings page wrapper

@@ -34,7 +34,7 @@ interface TemplateDetails extends QuizTemplate {
 
 interface TemplateMarketProps {
   token: string | null;
-  onBack: () => void;
+  onBack?: () => void;
   onUseTemplate: (quiz: any) => void;
   onLogin: () => void;
 }
@@ -51,7 +51,7 @@ const categoryConfig: Record<TemplateCategory, { label: string; icon: any; color
   other: { label: 'Other', icon: MoreHorizontal, color: 'from-gray-500 to-slate-600' }
 };
 
-export function TemplateMarket({ token, onBack, onUseTemplate, onLogin }: TemplateMarketProps) {
+export function TemplateMarket({ token, onUseTemplate, onLogin }: TemplateMarketProps) {
   const { user } = useAuth();
   const [templates, setTemplates] = useState<QuizTemplate[]>([]);
   const [userGroups, setUserGroups] = useState<Group[]>([]);
