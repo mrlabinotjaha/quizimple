@@ -285,18 +285,6 @@ export function LandingPage({ onGetStarted, onLogin, onTemplateMarket, onJoinQui
                   </div>
                 </div>
 
-                {/* Floating Notification */}
-                <div className="absolute -top-4 -right-4 bg-white dark:bg-[#1A1A1F] rounded-2xl shadow-xl shadow-[#1E1E2E]/10 dark:shadow-black/30 px-5 py-4 border border-[#1E1E2E]/5 dark:border-white/10 animate-bounce">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-violet-100 dark:bg-violet-500/20 rounded-full flex items-center justify-center">
-                      <Sparkles className="w-5 h-5 text-violet-500 dark:text-violet-400" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-[#1E1E2E] dark:text-white text-sm">Questions Ready!</p>
-                      <p className="text-xs text-[#1E1E2E]/50 dark:text-white/50">12 questions imported</p>
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
