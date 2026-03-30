@@ -35,7 +35,7 @@ export function CreateQuiz({ quiz: existingQuiz, onBack, onQuizCreated, onHost }
   const { token } = useAuth();
   const { showToast } = useToast();
   const [name, setName] = useState(existingQuiz?.name || '');
-  const [hideResults, setHideResults] = useState(existingQuiz?.hide_results || false);
+  const [hideResults, setHideResults] = useState(existingQuiz?.hide_results ?? true);
   const [funMode, setFunMode] = useState(existingQuiz?.fun_mode || false);
   const [quiz, setQuiz] = useState<Quiz | null>(existingQuiz || null);
   const [showAddQuestion, setShowAddQuestion] = useState(false);
@@ -925,8 +925,9 @@ export function CreateQuiz({ quiz: existingQuiz, onBack, onQuizCreated, onHost }
                     <div>
                       <p className="font-medium text-[#1E1E2E] dark:text-white text-sm">Fun Mode <span className="text-xs text-purple-500">(Beta)</span></p>
                       <p className="text-xs text-[#1E1E2E]/50 dark:text-white/50">
-                        {funMode ? 'Chaos enabled!' : 'Random effects'}
+                        {funMode ? 'Chaos enabled!' : 'Random effects during quiz'}
                       </p>
+                      <p className="text-xs text-amber-500/70 dark:text-amber-400/70">Doesn't work well on mobile</p>
                     </div>
                   </div>
                   <div
