@@ -282,7 +282,6 @@ function EditQuizPage() {
 
 // Groups page wrapper
 function GroupsPage() {
-  const navigate = useNavigate();
   return <Groups />;
 }
 
