@@ -109,6 +109,7 @@ class Player(BaseModel):
     answer_times: dict[int, float] = {}  # question_index -> time taken in seconds
     tab_switches: int = 0  # cheat detection: number of times user switched tabs
     correct_answers: int = 0  # number of questions answered correctly
+    disconnected_at: Optional[float] = None  # timestamp when disconnected
 
 
 class RoomState(str, Enum):

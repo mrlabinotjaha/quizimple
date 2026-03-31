@@ -19,6 +19,7 @@ interface HostControlsProps {
   onResume: () => void;
   isPaused: boolean;
   pausedTimeRemaining: number;
+  disconnectedPlayer?: string | null;
   hideQuestions?: boolean;
 }
 
@@ -34,6 +35,7 @@ export function HostControls({
   onResume,
   isPaused,
   pausedTimeRemaining,
+  disconnectedPlayer = null,
   hideQuestions = false,
 }: HostControlsProps) {
   const [timeLeft, setTimeLeft] = useState(question.time_limit);
@@ -169,7 +171,13 @@ export function HostControls({
             <CardContent className="pt-6 text-center">
               <Pause className="w-8 h-8 text-amber-500 mx-auto mb-2" />
               <p className="font-semibold text-amber-500">Quiz Paused</p>
-              <p className="text-sm text-muted-foreground">Players' timers are frozen</p>
+              {disconnectedPlayer ? (
+                <p className="text-sm text-muted-foreground">
+                  <span className="font-medium text-amber-500">{disconnectedPlayer}</span> disconnected — waiting for reconnection or resume manually
+                </p>
+              ) : (
+                <p className="text-sm text-muted-foreground">Players' timers are frozen</p>
+              )}
             </CardContent>
           </Card>
         )}

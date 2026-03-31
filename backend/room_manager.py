@@ -41,15 +41,53 @@ def get_room(room_code: str) -> Optional[Room]:
 
 def join_room(room_code: str, user_id: str, username: str) -> Optional[Player]:
     room = rooms_db.get(room_code)
-    if not room or room.state != RoomState.LOBBY:
+    if not room:
         return None
 
+    # Allow rejoining if player was disconnected (reconnection)
     if user_id in room.players:
+        room.players[user_id].disconnected_at = None
         return room.players[user_id]
+
+    # New players can only join during LOBBY
+    if room.state != RoomState.LOBBY:
+        return None
 
     player = Player(id=user_id, username=username, score=0, answers={})
     room.players[user_id] = player
     return player
+
+
+def disconnect_player(room_code: str, user_id: str) -> bool:
+    """Mark a player as disconnected (grace period before removal)."""
+    room = rooms_db.get(room_code)
+    if not room or user_id not in room.players:
+        return False
+    room.players[user_id].disconnected_at = time.time()
+    return True
+
+
+def reconnect_player(room_code: str, user_id: str) -> Optional[Player]:
+    """Reconnect a disconnected player."""
+    room = rooms_db.get(room_code)
+    if not room or user_id not in room.players:
+        return None
+    room.players[user_id].disconnected_at = None
+    return room.players[user_id]
+
+
+def cleanup_disconnected(room_code: str, grace_seconds: float = 30.0) -> list[str]:
+    """Remove players who have been disconnected longer than grace period. Returns removed user_ids."""
+    room = rooms_db.get(room_code)
+    if not room:
+        return []
+    now = time.time()
+    removed = []
+    for user_id, player in list(room.players.items()):
+        if player.disconnected_at and (now - player.disconnected_at) > grace_seconds:
+            del room.players[user_id]
+            removed.append(user_id)
+    return removed
 
 
 def leave_room(room_code: str, user_id: str) -> bool:

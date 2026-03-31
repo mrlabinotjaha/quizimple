@@ -14,7 +14,7 @@ from models import (
     QuestionsImport, Quiz, Question, AIGenerateRequest, TemplateCreate,
     TemplateCategory, TemplateRating, TemplateUpdate, GoogleAuthRequest,
     UserUpdate, PasswordChange, AccountDelete, User, GroupCreate, GroupInvite, Group,
-    AdminLogin
+    AdminLogin, RoomState
 )
 from auth import create_access_token, get_current_user, decode_token
 from user_manager import (
@@ -32,7 +32,7 @@ from room_manager import (
     create_room, get_room, join_room, leave_room, start_quiz as start_room_quiz,
     submit_answer, calculate_scores, next_question, end_quiz,
     get_leaderboard, get_players_list, record_tab_switch,
-    pause_quiz, resume_quiz
+    pause_quiz, resume_quiz, disconnect_player, reconnect_player, cleanup_disconnected
 )
 from session_manager import (
     save_session, get_session, get_quiz_sessions, get_quiz_analytics, get_user_sessions
@@ -813,7 +813,8 @@ async def websocket_endpoint(
     websocket: WebSocket,
     room_code: str,
     token: Optional[str] = None,
-    guest_name: Optional[str] = None
+    guest_name: Optional[str] = None,
+    guest_id: Optional[str] = None
 ):
     user_id: str
     username: str
@@ -828,9 +829,14 @@ async def websocket_endpoint(
         user_id = payload.get("sub")
         username = payload.get("username")
     elif guest_name:
-        # Guest user - generate temporary ID
-        user_id = f"guest_{uuid.uuid4().hex[:8]}"
-        username = guest_name.strip()[:20]  # Limit name length
+        # Guest user - reuse existing ID if reconnecting, otherwise generate new
+        room = get_room(room_code)
+        if guest_id and room and guest_id in room.players:
+            user_id = guest_id
+            username = room.players[guest_id].username
+        else:
+            user_id = f"guest_{uuid.uuid4().hex[:8]}"
+            username = guest_name.strip()[:20]
         is_guest = True
     else:
         await websocket.close(code=4001)
@@ -841,21 +847,49 @@ async def websocket_endpoint(
         await websocket.close(code=4004)
         return
 
+    # Check if this is a reconnection
+    is_reconnection = user_id in room.players and room.players[user_id].disconnected_at is not None
+    if is_reconnection:
+        reconnect_player(room_code, user_id)
+
     await manager.connect(websocket, room_code, user_id)
+
+    # If reconnecting, broadcast updated player list
+    if is_reconnection:
+        await manager.broadcast_to_room(room_code, {
+            "event": "player_joined",
+            "data": {"players": get_players_list(room_code)}
+        })
 
     try:
         # Send current room state
         quiz = get_quiz(room.quiz_id)
+        connected_data = {
+            "room_code": room_code,
+            "state": room.state,
+            "is_host": room.host_id == user_id,
+            "players": get_players_list(room_code),
+            "current_question": room.current_question,
+            "total_questions": len(quiz.questions) if quiz else 0,
+            "user_id": user_id
+        }
+
+        # If game is in progress, include current question so reconnecting players can continue
+        if room.state == RoomState.PLAYING and quiz and room.current_question < len(quiz.questions):
+            question = quiz.questions[room.current_question]
+            connected_data["question"] = {
+                "text": question.text,
+                "type": question.type,
+                "options": question.options,
+                "time_limit": question.time_limit,
+                "points": question.points,
+                "correct": question.correct  # For host display
+            }
+            connected_data["fun_mode"] = quiz.fun_mode
+
         await websocket.send_json({
             "event": "connected",
-            "data": {
-                "room_code": room_code,
-                "state": room.state,
-                "is_host": room.host_id == user_id,
-                "players": get_players_list(room_code),
-                "current_question": room.current_question,
-                "total_questions": len(quiz.questions) if quiz else 0
-            }
+            "data": connected_data
         })
 
         while True:
@@ -1098,11 +1132,58 @@ async def websocket_endpoint(
 
     except WebSocketDisconnect:
         manager.disconnect(room_code, user_id)
-        leave_room(room_code, user_id)
-        await manager.broadcast_to_room(room_code, {
-            "event": "player_left",
-            "data": {"players": get_players_list(room_code)}
-        })
+
+        # Don't remove player immediately — use grace period
+        room = get_room(room_code)
+        if room and room.state == RoomState.LOBBY:
+            # In lobby, remove immediately
+            leave_room(room_code, user_id)
+            await manager.broadcast_to_room(room_code, {
+                "event": "player_left",
+                "data": {"players": get_players_list(room_code)}
+            })
+        elif room and user_id in room.players and room.host_id != user_id:
+            # Player disconnected during game — mark as disconnected and auto-pause
+            player_name = room.players[user_id].username
+            disconnect_player(room_code, user_id)
+
+            # Auto-pause the quiz so host can decide
+            if not room.paused:
+                # Calculate approximate time remaining (rough estimate)
+                quiz = get_quiz(room.quiz_id)
+                time_remaining = 0
+                if quiz and room.current_question < len(quiz.questions):
+                    time_remaining = quiz.questions[room.current_question].time_limit
+                pause_quiz(room_code, room.host_id, time_remaining)
+
+                await manager.broadcast_to_room(room_code, {
+                    "event": "quiz_paused",
+                    "data": {"time_remaining": time_remaining}
+                })
+
+            # Notify host about the disconnection
+            await manager.broadcast_to_room(room_code, {
+                "event": "player_disconnected",
+                "data": {
+                    "username": player_name,
+                    "players": get_players_list(room_code)
+                }
+            })
+
+            # Schedule cleanup after 60 seconds if still disconnected
+            import asyncio
+            async def _cleanup_after_grace():
+                await asyncio.sleep(60)
+                removed = cleanup_disconnected(room_code, grace_seconds=60)
+                if removed:
+                    await manager.broadcast_to_room(room_code, {
+                        "event": "player_left",
+                        "data": {"players": get_players_list(room_code)}
+                    })
+            asyncio.create_task(_cleanup_after_grace())
+        elif room and user_id == room.host_id:
+            # Host disconnected — just remove from connection manager, don't remove from room
+            pass
 
 
 # ==================== Admin Dashboard Endpoints ====================

@@ -28,6 +28,11 @@ type RoomState = 'loading' | 'lobby' | 'playing' | 'results' | 'finished';
 export function Room({ roomCode, onLeave, guestName }: RoomProps) {
   const { token } = useAuth();
   const isGuest = !!guestName;
+  const [guestId] = useState<string | null>(() => {
+    if (!guestName) return null;
+    const stored = localStorage.getItem(`guest_${roomCode}`);
+    return stored ? JSON.parse(stored).guest_id : null;
+  });
   const [state, setState] = useState<RoomState>('loading');
   const [isHost, setIsHost] = useState(false);
   const [quizName, setQuizName] = useState('');
@@ -47,6 +52,7 @@ export function Room({ roomCode, onLeave, guestName }: RoomProps) {
   const [hideQuestionsForHost, setHideQuestionsForHost] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [pausedTimeRemaining, setPausedTimeRemaining] = useState(0);
+  const [disconnectedPlayer, setDisconnectedPlayer] = useState<string | null>(null);
 
   const handleMessage = useCallback((message: WSMessage) => {
     switch (message.event) {
@@ -54,13 +60,34 @@ export function Room({ roomCode, onLeave, guestName }: RoomProps) {
         setIsHost(message.data.is_host as boolean);
         setPlayers(message.data.players as Player[]);
         setTotalQuestions(message.data.total_questions as number);
+        // Store guest identity for reconnection
+        if (isGuest && message.data.user_id) {
+          localStorage.setItem(`guest_${roomCode}`, JSON.stringify({
+            guest_id: message.data.user_id as string,
+            guest_name: guestName
+          }));
+        }
         // Host should always start in lobby - only start quiz via explicit action
         // Players can reconnect to a playing game
         if (message.data.is_host) {
-          setState('lobby');
+          if (message.data.state === 'playing' && message.data.question) {
+            // Host reconnecting to in-progress game
+            setCurrentQuestion(message.data.question as QuestionDisplay);
+            setQuestionIndex(message.data.current_question as number);
+            setFunMode(message.data.fun_mode as boolean || false);
+            setState('playing');
+          } else {
+            setState('lobby');
+          }
         } else if (message.data.state === 'lobby') {
           setState('lobby');
         } else if (message.data.state === 'playing') {
+          // Player reconnecting — load current question
+          if (message.data.question) {
+            setCurrentQuestion(message.data.question as QuestionDisplay);
+            setQuestionIndex(message.data.current_question as number);
+            setFunMode(message.data.fun_mode as boolean || false);
+          }
           setState('playing');
         } else {
           setState('lobby');
@@ -70,6 +97,11 @@ export function Room({ roomCode, onLeave, guestName }: RoomProps) {
       case 'player_joined':
       case 'player_left':
         setPlayers(message.data.players as Player[]);
+        break;
+
+      case 'player_disconnected':
+        setPlayers(message.data.players as Player[]);
+        setDisconnectedPlayer(message.data.username as string);
         break;
 
       case 'quiz_started':
@@ -94,6 +126,7 @@ export function Room({ roomCode, onLeave, guestName }: RoomProps) {
       case 'quiz_resumed':
         setIsPaused(false);
         setPausedTimeRemaining(message.data.time_remaining as number);
+        setDisconnectedPlayer(null);
         break;
 
       case 'answer_received':
@@ -133,6 +166,7 @@ export function Room({ roomCode, onLeave, guestName }: RoomProps) {
     roomCode,
     token: isGuest ? null : token,
     guestName,
+    guestId,
     onMessage: handleMessage,
   });
 
@@ -221,6 +255,13 @@ export function Room({ roomCode, onLeave, guestName }: RoomProps) {
     sendMessage('end_quiz');
   };
 
+  // Reconnecting banner
+  const reconnectingBanner = !isConnected && state !== 'loading' ? (
+    <div className="fixed top-0 left-0 right-0 z-50 bg-amber-500 text-white text-center py-2 text-sm font-medium animate-pulse">
+      Reconnecting...
+    </div>
+  ) : null;
+
   if (error) {
     return (
       <div className="min-h-screen p-4 md:p-8 flex items-center justify-center">
@@ -255,19 +296,19 @@ export function Room({ roomCode, onLeave, guestName }: RoomProps) {
   }
 
   if (state === 'finished' && leaderboard) {
-    return <Leaderboard data={leaderboard} onLeave={onLeave} hideResults={hideResults} isHost={isHost} myAnswers={myAnswers} />;
+    return <>{reconnectingBanner}<Leaderboard data={leaderboard} onLeave={onLeave} hideResults={hideResults} isHost={isHost} myAnswers={myAnswers} /></>;
   }
 
   if (state === 'lobby') {
     return (
-      <Lobby
+      <>{reconnectingBanner}<Lobby
         roomCode={roomCode}
         players={players}
         isHost={isHost}
         quizName={quizName}
         onStart={handleStart}
         onLeave={onLeave}
-      />
+      /></>
     );
   }
 
@@ -286,6 +327,7 @@ export function Room({ roomCode, onLeave, guestName }: RoomProps) {
           onResume={handleResumeQuiz}
           isPaused={isPaused}
           pausedTimeRemaining={pausedTimeRemaining}
+          disconnectedPlayer={disconnectedPlayer}
           hideQuestions={hideQuestionsForHost}
         />
       );

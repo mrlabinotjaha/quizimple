@@ -1,7 +1,8 @@
+import { useState } from 'react';
 import { LeaderboardData } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Trophy, Medal, Award, Home, EyeOff, CheckCircle, XCircle, BookOpen, Clock } from 'lucide-react';
+import { Trophy, Medal, Award, Home, EyeOff, CheckCircle, XCircle, BookOpen, Clock, ClipboardCopy, Check } from 'lucide-react';
 
 interface LeaderboardProps {
   data: LeaderboardData;
@@ -12,9 +13,30 @@ interface LeaderboardProps {
 }
 
 export function Leaderboard({ data, onLeave, hideResults = false, isHost = false, myAnswers = {} }: LeaderboardProps) {
+  const [copied, setCopied] = useState(false);
 
   // Host always sees full results, players see based on hideResults setting
   const showDetailedResults = isHost || !hideResults;
+
+  const copyForExcel = () => {
+    const { players: p, total_questions: tq } = data;
+    const header = ['Rank', 'Username', 'Score', 'Correct', 'Wrong', 'Accuracy %', 'Avg Time (s)', 'Tab Switches'].join('\t');
+    const rows = p.map((entry, i) => [
+      i + 1,
+      entry.username,
+      entry.score,
+      entry.correct_answers,
+      entry.wrong_answers,
+      tq > 0 ? Math.round((entry.correct_answers / tq) * 100) : 0,
+      entry.avg_time !== undefined && entry.avg_time < 999999 ? entry.avg_time : '-',
+      entry.tab_switches
+    ].join('\t'));
+    const tsv = [header, ...rows].join('\n');
+    navigator.clipboard.writeText(tsv).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
   const { players, total_questions, questions } = data;
   const podiumOrder = [1, 0, 2]; // 2nd, 1st, 3rd place display order
   const winner = players[0];
@@ -177,6 +199,20 @@ export function Leaderboard({ data, onLeave, hideResults = false, isHost = false
             </Card>
           )}
 
+          {showDetailedResults && (
+            <Button
+              variant="outline"
+              className="w-full"
+              size="lg"
+              onClick={copyForExcel}
+            >
+              {copied ? (
+                <><Check className="w-5 h-5 mr-2 text-green-500" />Copied to Clipboard!</>
+              ) : (
+                <><ClipboardCopy className="w-5 h-5 mr-2" />Copy Results for Excel</>
+              )}
+            </Button>
+          )}
           <Button className="w-full" size="lg" onClick={onLeave}>
             <Home className="w-5 h-5 mr-2" />
             Back to Home
