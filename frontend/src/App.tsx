@@ -393,6 +393,7 @@ function WithHeader({ children }: { children: React.ReactNode }) {
         onGroups={() => navigate('/groups')}
         onJoinQuiz={() => navigate('/join')}
         onSettings={() => navigate('/settings')}
+        onCreateQuiz={() => navigate('/create-quiz')}
       />
       {children}
     </>

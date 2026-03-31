@@ -430,6 +430,31 @@ export function CreateQuiz({ quiz: existingQuiz, onBack, onQuizCreated, onHost }
     }
   };
 
+  const handleShuffleQuestions = async () => {
+    if (!quiz || quiz.questions.length < 2) return;
+
+    // Fisher-Yates shuffle
+    const shuffled = [...quiz.questions];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+
+    try {
+      const res = await fetch(`${API_URL}/quizzes/${quiz.id}/questions/import`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ questions: shuffled, replace: true }),
+      });
+      if (res.ok) {
+        fetchQuiz(quiz.id);
+        showToast('Questions shuffled!', 'success');
+      }
+    } catch (err) {
+      console.error('Failed to shuffle:', err);
+    }
+  };
+
   // Create Quiz Form
   if (!quiz) {
     return (
@@ -954,6 +979,17 @@ export function CreateQuiz({ quiz: existingQuiz, onBack, onQuizCreated, onHost }
                   <div className="mb-3">
                     <label className="text-xs text-[#1E1E2E]/60 dark:text-white/60 mb-1.5 block">Time Limit</label>
                     <div className="flex items-center gap-1 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() => handleBulkTimeLimit(0)}
+                        className={`px-2 py-1 text-xs font-medium rounded-lg transition-colors ${
+                          quizTimeLimit === 0
+                            ? 'bg-[#FF6B4A] text-white'
+                            : 'bg-[#1E1E2E]/5 dark:bg-white/10 text-[#1E1E2E]/60 dark:text-white/60 hover:bg-[#1E1E2E]/10 dark:hover:bg-white/20'
+                        }`}
+                      >
+                        None
+                      </button>
                       {[15, 30, 60].map((time) => (
                         <button
                           key={time}
@@ -972,11 +1008,11 @@ export function CreateQuiz({ quiz: existingQuiz, onBack, onQuizCreated, onHost }
                         type="number"
                         value={quizTimeLimit}
                         onChange={(e) => {
-                          const val = Math.max(5, Math.min(300, parseInt(e.target.value) || 30));
+                          const val = Math.max(0, Math.min(300, parseInt(e.target.value) || 0));
                           setQuizTimeLimit(val);
                         }}
                         onBlur={() => handleBulkTimeLimit(quizTimeLimit)}
-                        min={5}
+                        min={0}
                         max={300}
                         className="w-14 px-2 py-1 text-xs bg-[#FFFBF7] dark:bg-[#0D0D0F] border border-[#1E1E2E]/10 dark:border-white/10 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#FF6B4A]/30 text-[#1E1E2E] dark:text-white text-center"
                       />
@@ -987,6 +1023,17 @@ export function CreateQuiz({ quiz: existingQuiz, onBack, onQuizCreated, onHost }
                   <div>
                     <label className="text-xs text-[#1E1E2E]/60 dark:text-white/60 mb-1.5 block">Points</label>
                     <div className="flex items-center gap-1 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() => handleBulkPoints(0)}
+                        className={`px-2 py-1 text-xs font-medium rounded-lg transition-colors ${
+                          quizPoints === 0
+                            ? 'bg-[#FF6B4A] text-white'
+                            : 'bg-[#1E1E2E]/5 dark:bg-white/10 text-[#1E1E2E]/60 dark:text-white/60 hover:bg-[#1E1E2E]/10 dark:hover:bg-white/20'
+                        }`}
+                      >
+                        None
+                      </button>
                       {[50, 100, 200].map((pts) => (
                         <button
                           key={pts}
@@ -1005,11 +1052,11 @@ export function CreateQuiz({ quiz: existingQuiz, onBack, onQuizCreated, onHost }
                         type="number"
                         value={quizPoints}
                         onChange={(e) => {
-                          const val = Math.max(10, Math.min(1000, parseInt(e.target.value) || 100));
+                          const val = Math.max(0, Math.min(1000, parseInt(e.target.value) || 0));
                           setQuizPoints(val);
                         }}
                         onBlur={() => handleBulkPoints(quizPoints)}
-                        min={10}
+                        min={0}
                         max={1000}
                         step={10}
                         className="w-14 px-2 py-1 text-xs bg-[#FFFBF7] dark:bg-[#0D0D0F] border border-[#1E1E2E]/10 dark:border-white/10 rounded-lg focus:outline-none focus:ring-1 focus:ring-[#FF6B4A]/30 text-[#1E1E2E] dark:text-white text-center"
@@ -1021,6 +1068,18 @@ export function CreateQuiz({ quiz: existingQuiz, onBack, onQuizCreated, onHost }
                     <p className="text-xs text-[#1E1E2E]/40 dark:text-white/40 mt-3">
                       Changes apply to all {quiz.questions.length} questions
                     </p>
+                  )}
+
+                  {/* Shuffle Questions */}
+                  {quiz.questions.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={handleShuffleQuestions}
+                      className="w-full mt-3 flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-[#1E1E2E]/60 dark:text-white/60 hover:text-[#1E1E2E] dark:hover:text-white bg-[#1E1E2E]/5 dark:bg-white/10 hover:bg-[#1E1E2E]/10 dark:hover:bg-white/20 rounded-lg transition-colors"
+                    >
+                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
+                      Shuffle Questions
+                    </button>
                   )}
                 </div>
               </div>
