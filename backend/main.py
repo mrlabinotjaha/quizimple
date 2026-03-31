@@ -886,6 +886,8 @@ async def websocket_endpoint(
                 "correct": question.correct  # For host display
             }
             connected_data["fun_mode"] = quiz.fun_mode
+            connected_data["paused"] = room.paused
+            connected_data["time_remaining"] = room.time_remaining_when_paused if room.paused else 0
 
         await websocket.send_json({
             "event": "connected",

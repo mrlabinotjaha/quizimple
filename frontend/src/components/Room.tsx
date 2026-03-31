@@ -67,11 +67,16 @@ export function Room({ roomCode, onLeave, guestName }: RoomProps) {
             guest_name: guestName
           }));
         }
+        // Restore pause state if game is paused
+        if (message.data.paused) {
+          setIsPaused(true);
+          setPausedTimeRemaining(message.data.time_remaining as number || 0);
+        }
+
         // Host should always start in lobby - only start quiz via explicit action
         // Players can reconnect to a playing game
         if (message.data.is_host) {
           if (message.data.state === 'playing' && message.data.question) {
-            // Host reconnecting to in-progress game
             setCurrentQuestion(message.data.question as QuestionDisplay);
             setQuestionIndex(message.data.current_question as number);
             setFunMode(message.data.fun_mode as boolean || false);
@@ -82,7 +87,6 @@ export function Room({ roomCode, onLeave, guestName }: RoomProps) {
         } else if (message.data.state === 'lobby') {
           setState('lobby');
         } else if (message.data.state === 'playing') {
-          // Player reconnecting — load current question
           if (message.data.question) {
             setCurrentQuestion(message.data.question as QuestionDisplay);
             setQuestionIndex(message.data.current_question as number);
