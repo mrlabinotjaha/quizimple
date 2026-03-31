@@ -57,16 +57,23 @@ function RoomPage() {
   const { roomCode } = useParams<{ roomCode: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [guestName, setGuestName] = useState<string | null>(null);
+  const [guestName, setGuestName] = useState<string | null>(() => {
+    if (!roomCode) return null;
+    const stored = localStorage.getItem(`guest_${roomCode}`);
+    if (stored) {
+      try { return JSON.parse(stored).guest_name || null; } catch { return null; }
+    }
+    return null;
+  });
   const [showNamePrompt, setShowNamePrompt] = useState(false);
   const [nameInput, setNameInput] = useState('');
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!user) {
+    if (!user && !guestName) {
       setShowNamePrompt(true);
     }
-  }, [user]);
+  }, [user, guestName]);
 
   const handleGuestJoin = (e: React.FormEvent) => {
     e.preventDefault();
