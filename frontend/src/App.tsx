@@ -14,6 +14,7 @@ import { QuizDetail } from '@/components/QuizDetail';
 import { CreateQuiz } from '@/components/CreateQuiz';
 import { Settings } from '@/components/Settings';
 import { Groups } from '@/components/Groups';
+import { AdminDashboard } from '@/components/AdminDashboard';
 import { AppHeader } from '@/components/AppHeader';
 import { API_URL } from '@/config';
 import '@/styles/index.css';
@@ -413,6 +414,7 @@ function AppRoutes() {
       <Route path="/settings" element={<RequireAuth><WithHeader><SettingsPage /></WithHeader></RequireAuth>} />
       <Route path="/quiz/:quizId" element={<RequireAuth><WithHeader><QuizDetailPage /></WithHeader></RequireAuth>} />
       <Route path="/quiz/:quizId/edit" element={<RequireAuth><WithHeader><EditQuizPage /></WithHeader></RequireAuth>} />
+      <Route path="/admin" element={<AdminDashboard />} />
       <Route path="/room/:roomCode" element={<RoomPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

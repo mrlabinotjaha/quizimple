@@ -274,3 +274,7 @@ class GroupCreate(BaseModel):
 
 class GroupInvite(BaseModel):
     username: str
+
+
+class AdminLogin(BaseModel):
+    password: str

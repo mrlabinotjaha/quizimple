@@ -13,7 +13,8 @@ from models import (
     UserCreate, UserLogin, Token, QuizCreate, QuizUpdate, QuestionCreate,
     QuestionsImport, Quiz, Question, AIGenerateRequest, TemplateCreate,
     TemplateCategory, TemplateRating, TemplateUpdate, GoogleAuthRequest,
-    UserUpdate, PasswordChange, AccountDelete, User, GroupCreate, GroupInvite, Group
+    UserUpdate, PasswordChange, AccountDelete, User, GroupCreate, GroupInvite, Group,
+    AdminLogin
 )
 from auth import create_access_token, get_current_user, decode_token
 from user_manager import (
@@ -47,7 +48,7 @@ from group_manager import (
     get_user_groups, add_member, remove_member as gm_remove_member,
     delete_group as gm_delete_group, is_group_member, invite_by_username
 )
-from database import init_db
+from database import init_db, SessionLocal, UserDB, QuizDB, TemplateDB, SessionDB, GroupDB, GroupMemberDB
 
 app = FastAPI(title="Quiz App API")
 
@@ -115,6 +116,32 @@ room_start_times: dict[str, datetime] = {}
 
 # Google OAuth configuration
 GOOGLE_CLIENT_ID = None  # Set via environment variable in production
+
+# Admin configuration
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
+
+
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+
+admin_security = HTTPBearer()
+
+
+async def get_admin_user(credentials: HTTPAuthorizationCredentials = Depends(admin_security)) -> dict:
+    """Dependency that checks the token has role=admin."""
+    token = credentials.credentials
+    payload = decode_token(token)
+    if payload is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    if payload.get("role") != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required",
+        )
+    return payload
 
 
 # Auth endpoints
@@ -1076,6 +1103,254 @@ async def websocket_endpoint(
             "event": "player_left",
             "data": {"players": get_players_list(room_code)}
         })
+
+
+# ==================== Admin Dashboard Endpoints ====================
+
+@app.post("/api/admin/login")
+async def admin_login(data: AdminLogin):
+    """Admin login with hardcoded password."""
+    if data.password != ADMIN_PASSWORD:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid admin password",
+        )
+    token = create_access_token({"sub": "admin", "role": "admin"})
+    return {"access_token": token, "token_type": "bearer"}
+
+
+@app.get("/api/admin/stats")
+async def admin_stats(admin: dict = Depends(get_admin_user)):
+    """Get admin dashboard statistics."""
+    db = SessionLocal()
+    try:
+        from sqlalchemy import func
+
+        total_users = db.query(func.count(UserDB.id)).scalar() or 0
+        total_quizzes = db.query(func.count(QuizDB.id)).scalar() or 0
+        total_templates = db.query(func.count(TemplateDB.id)).scalar() or 0
+        total_sessions = db.query(func.count(SessionDB.id)).scalar() or 0
+        total_groups = db.query(func.count(GroupDB.id)).scalar() or 0
+
+        # Recent users with quiz count
+        recent_users_rows = db.query(UserDB).order_by(UserDB.created_at.desc()).limit(10).all()
+        recent_users = []
+        for u in recent_users_rows:
+            quiz_count = db.query(func.count(QuizDB.id)).filter(QuizDB.owner_id == u.id).scalar() or 0
+            recent_users.append({
+                "id": u.id,
+                "username": u.username,
+                "email": u.email,
+                "created_at": u.created_at.isoformat() if u.created_at else None,
+                "quiz_count": quiz_count,
+            })
+
+        # Recent quizzes with owner username and question count
+        recent_quizzes_rows = (
+            db.query(QuizDB, UserDB.username)
+            .join(UserDB, QuizDB.owner_id == UserDB.id)
+            .order_by(QuizDB.created_at.desc())
+            .limit(10)
+            .all()
+        )
+        recent_quizzes = []
+        for quiz, owner_username in recent_quizzes_rows:
+            question_count = len(quiz.questions) if quiz.questions else 0
+            recent_quizzes.append({
+                "id": quiz.id,
+                "name": quiz.name,
+                "owner_username": owner_username,
+                "question_count": question_count,
+                "created_at": quiz.created_at.isoformat() if quiz.created_at else None,
+            })
+
+        # Recent templates
+        recent_templates_rows = db.query(TemplateDB).order_by(TemplateDB.created_at.desc()).limit(10).all()
+        recent_templates = []
+        for t in recent_templates_rows:
+            recent_templates.append({
+                "id": t.id,
+                "name": t.name,
+                "author_name": t.author_name,
+                "visibility": t.visibility,
+                "uses_count": t.uses_count,
+                "created_at": t.created_at.isoformat() if t.created_at else None,
+            })
+
+        return {
+            "total_users": total_users,
+            "total_quizzes": total_quizzes,
+            "total_templates": total_templates,
+            "total_sessions": total_sessions,
+            "total_groups": total_groups,
+            "recent_users": recent_users,
+            "recent_quizzes": recent_quizzes,
+            "recent_templates": recent_templates,
+        }
+    finally:
+        db.close()
+
+
+# Admin Users CRUD
+@app.get("/api/admin/users")
+async def admin_list_users(admin: dict = Depends(get_admin_user)):
+    """List all users."""
+    db = SessionLocal()
+    try:
+        from sqlalchemy import func
+
+        users = db.query(UserDB).order_by(UserDB.created_at.desc()).all()
+        result = []
+        for u in users:
+            quiz_count = db.query(func.count(QuizDB.id)).filter(QuizDB.owner_id == u.id).scalar() or 0
+            result.append({
+                "id": u.id,
+                "username": u.username,
+                "email": u.email,
+                "created_at": u.created_at.isoformat() if u.created_at else None,
+                "quiz_count": quiz_count,
+            })
+        return result
+    finally:
+        db.close()
+
+
+@app.delete("/api/admin/users/{user_id}")
+async def admin_delete_user(user_id: str, admin: dict = Depends(get_admin_user)):
+    """Delete a user and all their data."""
+    db = SessionLocal()
+    try:
+        user = db.query(UserDB).filter(UserDB.id == user_id).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        db.delete(user)
+        db.commit()
+        return {"message": f"User '{user.username}' deleted successfully"}
+    finally:
+        db.close()
+
+
+# Admin Quizzes CRUD
+@app.get("/api/admin/quizzes")
+async def admin_list_quizzes(admin: dict = Depends(get_admin_user)):
+    """List all quizzes."""
+    db = SessionLocal()
+    try:
+        rows = (
+            db.query(QuizDB, UserDB.username)
+            .join(UserDB, QuizDB.owner_id == UserDB.id)
+            .order_by(QuizDB.created_at.desc())
+            .all()
+        )
+        result = []
+        for quiz, owner_username in rows:
+            question_count = len(quiz.questions) if quiz.questions else 0
+            result.append({
+                "id": quiz.id,
+                "name": quiz.name,
+                "owner_id": quiz.owner_id,
+                "owner_username": owner_username,
+                "question_count": question_count,
+                "created_at": quiz.created_at.isoformat() if quiz.created_at else None,
+            })
+        return result
+    finally:
+        db.close()
+
+
+@app.delete("/api/admin/quizzes/{quiz_id}")
+async def admin_delete_quiz(quiz_id: str, admin: dict = Depends(get_admin_user)):
+    """Delete a quiz."""
+    db = SessionLocal()
+    try:
+        quiz = db.query(QuizDB).filter(QuizDB.id == quiz_id).first()
+        if not quiz:
+            raise HTTPException(status_code=404, detail="Quiz not found")
+        db.delete(quiz)
+        db.commit()
+        return {"message": f"Quiz '{quiz.name}' deleted successfully"}
+    finally:
+        db.close()
+
+
+# Admin Templates CRUD
+@app.get("/api/admin/templates")
+async def admin_list_templates(admin: dict = Depends(get_admin_user)):
+    """List all templates."""
+    db = SessionLocal()
+    try:
+        templates = db.query(TemplateDB).order_by(TemplateDB.created_at.desc()).all()
+        result = []
+        for t in templates:
+            result.append({
+                "id": t.id,
+                "name": t.name,
+                "author_name": t.author_name,
+                "visibility": t.visibility,
+                "category": t.category,
+                "uses_count": t.uses_count,
+                "rating": t.rating,
+                "created_at": t.created_at.isoformat() if t.created_at else None,
+            })
+        return result
+    finally:
+        db.close()
+
+
+@app.delete("/api/admin/templates/{template_id}")
+async def admin_delete_template(template_id: str, admin: dict = Depends(get_admin_user)):
+    """Delete a template."""
+    db = SessionLocal()
+    try:
+        template = db.query(TemplateDB).filter(TemplateDB.id == template_id).first()
+        if not template:
+            raise HTTPException(status_code=404, detail="Template not found")
+        db.delete(template)
+        db.commit()
+        return {"message": f"Template '{template.name}' deleted successfully"}
+    finally:
+        db.close()
+
+
+# Admin Groups CRUD
+@app.get("/api/admin/groups")
+async def admin_list_groups(admin: dict = Depends(get_admin_user)):
+    """List all groups."""
+    db = SessionLocal()
+    try:
+        from sqlalchemy import func
+
+        groups = db.query(GroupDB).order_by(GroupDB.created_at.desc()).all()
+        result = []
+        for g in groups:
+            owner = db.query(UserDB).filter(UserDB.id == g.owner_id).first()
+            owner_username = owner.username if owner else "unknown"
+            member_count = db.query(func.count(GroupMemberDB.id)).filter(GroupMemberDB.group_id == g.id).scalar() or 0
+            result.append({
+                "id": g.id,
+                "name": g.name,
+                "owner_username": owner_username,
+                "member_count": member_count,
+                "created_at": g.created_at.isoformat() if g.created_at else None,
+            })
+        return result
+    finally:
+        db.close()
+
+
+@app.delete("/api/admin/groups/{group_id}")
+async def admin_delete_group(group_id: str, admin: dict = Depends(get_admin_user)):
+    """Delete a group."""
+    db = SessionLocal()
+    try:
+        group = db.query(GroupDB).filter(GroupDB.id == group_id).first()
+        if not group:
+            raise HTTPException(status_code=404, detail="Group not found")
+        db.delete(group)
+        db.commit()
+        return {"message": f"Group '{group.name}' deleted successfully"}
+    finally:
+        db.close()
 
 
 # Serve static frontend files in production
