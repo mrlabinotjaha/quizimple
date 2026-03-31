@@ -10,7 +10,16 @@ interface GuestJoinProps {
 
 export function GuestJoin({ onJoin, onSwitchToLogin, onBackToLanding, isLoggedIn }: GuestJoinProps) {
   const [roomCode, setRoomCode] = useState('');
-  const [name, setName] = useState('');
+  const [name, setName] = useState(() => {
+    // Try to find a stored guest name from any room
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith('guest_')) {
+        try { return JSON.parse(localStorage.getItem(key)!).guest_name || ''; } catch { /* skip */ }
+      }
+    }
+    return '';
+  });
   const [error, setError] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -18,13 +27,19 @@ export function GuestJoin({ onJoin, onSwitchToLogin, onBackToLanding, isLoggedIn
     setError('');
 
     const trimmedCode = roomCode.trim().toUpperCase();
-    const trimmedName = name.trim();
 
     if (trimmedCode.length !== 6) {
       setError('Room code must be 6 characters');
       return;
     }
 
+    // Logged-in users don't need a name
+    if (isLoggedIn) {
+      onJoin(trimmedCode, '');
+      return;
+    }
+
+    const trimmedName = name.trim();
     if (trimmedName.length < 2) {
       setError('Name must be at least 2 characters');
       return;
@@ -59,7 +74,7 @@ export function GuestJoin({ onJoin, onSwitchToLogin, onBackToLanding, isLoggedIn
             Join a Quiz
           </h1>
           <p className="text-[#1E1E2E]/50 dark:text-white/50 text-sm mt-1">
-            Enter the room code and your name to join
+            {isLoggedIn ? 'Enter the room code to join' : 'Enter the room code and your name to join'}
           </p>
         </div>
 
@@ -78,19 +93,21 @@ export function GuestJoin({ onJoin, onSwitchToLogin, onBackToLanding, isLoggedIn
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-[#1E1E2E] dark:text-white mb-2">
-              Your Name
-            </label>
-            <input
-              type="text"
-              placeholder="Enter your name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              maxLength={20}
-              className="w-full px-4 py-3 bg-[#FFFBF7] dark:bg-[#0D0D0F] border border-[#1E1E2E]/10 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF6B4A]/30 focus:border-[#FF6B4A] transition-all text-[#1E1E2E] dark:text-white placeholder:text-[#1E1E2E]/40 dark:placeholder:text-white/40"
-            />
-          </div>
+          {!isLoggedIn && (
+            <div>
+              <label className="block text-sm font-medium text-[#1E1E2E] dark:text-white mb-2">
+                Your Name
+              </label>
+              <input
+                type="text"
+                placeholder="Enter your name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                maxLength={20}
+                className="w-full px-4 py-3 bg-[#FFFBF7] dark:bg-[#0D0D0F] border border-[#1E1E2E]/10 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#FF6B4A]/30 focus:border-[#FF6B4A] transition-all text-[#1E1E2E] dark:text-white placeholder:text-[#1E1E2E]/40 dark:placeholder:text-white/40"
+              />
+            </div>
+          )}
 
           {error && (
             <p className="text-sm text-red-500 text-center">{error}</p>
@@ -98,7 +115,7 @@ export function GuestJoin({ onJoin, onSwitchToLogin, onBackToLanding, isLoggedIn
 
           <button
             type="submit"
-            disabled={roomCode.length !== 6 || name.trim().length < 2}
+            disabled={roomCode.length !== 6 || (!isLoggedIn && name.trim().length < 2)}
             className="w-full py-4 bg-gradient-to-r from-[#FF6B4A] to-[#FF8F6B] text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-[#FF6B4A]/30 transition-all disabled:opacity-50"
           >
             Join Room
