@@ -239,7 +239,7 @@ export function Groups() {
                               value={inviteUsername}
                               onChange={(e) => setInviteUsername(e.target.value)}
                               onKeyDown={(e) => { if (e.key === 'Enter') handleInvite(group.id); }}
-                              placeholder="Enter username"
+                              placeholder="Username or email"
                               className="flex-1 px-4 py-2.5 bg-[#FFFBF7] dark:bg-[#0D0D0F] border border-[#1E1E2E]/10 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500/30 focus:border-violet-500 text-[#1E1E2E] dark:text-white placeholder:text-[#1E1E2E]/40 dark:placeholder:text-white/40 text-sm"
                             />
                             <button

@@ -184,10 +184,12 @@ def is_group_member(group_id: str, user_id: str) -> bool:
 
 
 def invite_by_username(group_id: str, username: str) -> dict | None:
-    """Find a user by username and add them to the group. Returns {id, username} or None."""
+    """Find a user by username or email and add them to the group. Returns {id, username} or None."""
     db = SessionLocal()
     try:
         user = db.query(UserDB).filter(UserDB.username == username).first()
+        if not user:
+            user = db.query(UserDB).filter(UserDB.email == username).first()
         if not user:
             return None
 
