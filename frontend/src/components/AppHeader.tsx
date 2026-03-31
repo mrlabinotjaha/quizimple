@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { ThemeToggle } from './ThemeToggle';
 import {
   Zap,
   Users as UsersIcon,
