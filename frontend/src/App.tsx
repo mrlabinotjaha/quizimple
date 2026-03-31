@@ -184,7 +184,13 @@ function JoinPage() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-[#FFFBF7] dark:bg-[#0D0D0F]" style={{ fontFamily: "'DM Sans', sans-serif" }}>
       <GuestJoin
-        onJoin={(roomCode) => navigate(`/room/${roomCode}`)}
+        onJoin={(roomCode, guestName) => {
+          // Store guest name so RoomPage can pick it up
+          if (guestName && !user) {
+            localStorage.setItem(`guest_${roomCode}`, JSON.stringify({ guest_name: guestName, guest_id: null }));
+          }
+          navigate(`/room/${roomCode}`);
+        }}
         onSwitchToLogin={() => navigate('/login')}
         onBackToLanding={() => navigate('/')}
         isLoggedIn={!!user}
