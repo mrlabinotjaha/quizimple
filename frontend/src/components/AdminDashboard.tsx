@@ -8,8 +8,6 @@ import {
   Trash2,
   Shield,
   LogOut,
-  ChevronDown,
-  ChevronUp,
   Zap
 } from 'lucide-react';
 
@@ -38,7 +36,7 @@ export function AdminDashboard() {
   const [groups, setGroups] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const headers = token ? { Authorization: `Bearer ${token}` } : {};
+  const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
 
   useEffect(() => {
     if (token) fetchStats();
