@@ -15,6 +15,7 @@ import { CreateQuiz } from '@/components/CreateQuiz';
 import { Settings } from '@/components/Settings';
 import { Groups } from '@/components/Groups';
 import { AdminDashboard } from '@/components/AdminDashboard';
+import { TermsPage, PrivacyPage, CookiesPage } from '@/components/LegalPages';
 import { AppHeader } from '@/components/AppHeader';
 import { API_URL } from '@/config';
 import '@/styles/index.css';
@@ -401,6 +402,10 @@ function WithHeader({ children }: { children: React.ReactNode }) {
   );
 }
 
+function TermsPageWrapper() { const navigate = useNavigate(); return <TermsPage onBack={() => navigate('/')} />; }
+function PrivacyPageWrapper() { const navigate = useNavigate(); return <PrivacyPage onBack={() => navigate('/')} />; }
+function CookiesPageWrapper() { const navigate = useNavigate(); return <CookiesPage onBack={() => navigate('/')} />; }
+
 function AppRoutes() {
   return (
     <Routes>
@@ -415,6 +420,9 @@ function AppRoutes() {
       <Route path="/quiz/:quizId" element={<RequireAuth><WithHeader><QuizDetailPage /></WithHeader></RequireAuth>} />
       <Route path="/quiz/:quizId/edit" element={<RequireAuth><WithHeader><EditQuizPage /></WithHeader></RequireAuth>} />
       <Route path="/admin" element={<AdminDashboard />} />
+      <Route path="/terms" element={<TermsPageWrapper />} />
+      <Route path="/privacy" element={<PrivacyPageWrapper />} />
+      <Route path="/cookies" element={<CookiesPageWrapper />} />
       <Route path="/room/:roomCode" element={<RoomPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

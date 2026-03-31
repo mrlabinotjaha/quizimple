@@ -877,6 +877,15 @@ export function CreateQuiz({ quiz: existingQuiz, onBack, onQuizCreated, onHost }
                 <Upload className="w-4 h-4" />
                 Paste JSON
               </button>
+              {quiz.questions.length > 1 && (
+                <button
+                  onClick={handleShuffleQuestions}
+                  className="flex items-center gap-2 px-4 py-2.5 border border-[#1E1E2E]/10 dark:border-white/10 text-[#1E1E2E] dark:text-white font-medium rounded-xl hover:bg-[#1E1E2E]/5 dark:hover:bg-white/10 transition-colors"
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
+                  Shuffle
+                </button>
+              )}
               <button
                 onClick={handlePrintQuiz}
                 disabled={quiz.questions.length === 0}

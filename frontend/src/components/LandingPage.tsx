@@ -10,7 +10,6 @@ import {
   ArrowRight,
   Play,
   Check,
-  Star,
   ChevronRight,
   Store
 } from 'lucide-react';
@@ -175,31 +174,6 @@ export function LandingPage({ onGetStarted, onLogin, onTemplateMarket, onJoinQui
                 </button>
               </div>
 
-              <div className="flex items-center gap-6">
-                <div className="flex -space-x-3">
-                  {[
-                    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=face',
-                    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face',
-                    'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop&crop=face',
-                    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop&crop=face',
-                  ].map((src, i) => (
-                    <div key={i} className="w-10 h-10 rounded-full border-2 border-[#FFFBF7] dark:border-[#0D0D0F] overflow-hidden">
-                      <img src={src} alt="" className="w-full h-full object-cover" />
-                    </div>
-                  ))}
-                  <div className="w-10 h-10 rounded-full border-2 border-[#FFFBF7] dark:border-[#0D0D0F] bg-[#1E1E2E] dark:bg-white flex items-center justify-center text-xs font-bold text-white dark:text-[#1E1E2E]">
-                    +2k
-                  </div>
-                </div>
-                <div>
-                  <div className="flex items-center gap-1 mb-0.5">
-                    {[1, 2, 3, 4, 5].map(i => (
-                      <Star key={i} className="w-4 h-4 text-amber-400" fill="#fbbf24" />
-                    ))}
-                  </div>
-                  <p className="text-sm text-[#1E1E2E]/50 dark:text-white/50">Loved by 2,000+ educators</p>
-                </div>
-              </div>
             </div>
 
             {/* Right Visual - Interactive Card Stack */}
@@ -572,9 +546,9 @@ export function LandingPage({ onGetStarted, onLogin, onTemplateMarket, onJoinQui
       {/* Footer */}
       <footer className="bg-[#141418] text-white/50 py-16 px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-8 mb-12">
-            <div className="col-span-2">
-              <div className="flex items-center gap-3 mb-6">
+          <div className="flex flex-col md:flex-row items-start justify-between gap-8 mb-12">
+            <div>
+              <div className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 bg-gradient-to-br from-[#FF6B4A] to-[#FF8F6B] rounded-xl flex items-center justify-center">
                   <Zap className="w-5 h-5 text-white" />
                 </div>
@@ -586,40 +560,19 @@ export function LandingPage({ onGetStarted, onLogin, onTemplateMarket, onJoinQui
                 The modern quiz platform for educators and trainers. Create, host, and analyze — all in one place.
               </p>
             </div>
-            {[
-              {
-                title: 'Product',
-                links: ['Features', 'Templates', 'Groups']
-              },
-              {
-                title: 'Resources',
-                links: ['Documentation', 'API Reference', 'Help Center', 'Blog']
-              },
-              {
-                title: 'Company',
-                links: ['About', 'Careers', 'Contact', 'Press']
-              }
-            ].map((col, i) => (
-              <div key={i}>
-                <h4 className="text-white font-semibold mb-4">{col.title}</h4>
-                <ul className="space-y-3">
-                  {col.links.map((link, j) => (
-                    <li key={j}>
-                      <a href="#" className="text-sm hover:text-white transition-colors">
-                        {link}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
+            <div>
+              <h4 className="text-white font-semibold mb-4">Product</h4>
+              <ul className="space-y-3">
+                <li><button onClick={onTemplateMarket} className="text-sm hover:text-white transition-colors">Templates</button></li>
+              </ul>
+            </div>
           </div>
           <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-sm">&copy; 2026 Quizimple. All rights reserved.</p>
             <div className="flex gap-6 text-sm">
-              <a href="#" className="hover:text-white transition-colors">Terms of Service</a>
-              <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
-              <a href="#" className="hover:text-white transition-colors">Cookie Settings</a>
+              <a href="/terms" className="hover:text-white transition-colors">Terms of Service</a>
+              <a href="/privacy" className="hover:text-white transition-colors">Privacy Policy</a>
+              <a href="/cookies" className="hover:text-white transition-colors">Cookie Settings</a>
             </div>
           </div>
         </div>
