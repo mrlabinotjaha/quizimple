@@ -115,6 +115,7 @@ def start_quiz(room_code: str, host_id: str) -> bool:
     room.current_question = 0
     room.answers_received = 0
     room.question_start_time = time.time()
+    room.scored_questions = set()
     return True
 
 
@@ -157,13 +158,20 @@ def calculate_scores(room_code: str) -> dict[str, int]:
     question = quiz.questions[question_index]
     correct_answers = set(question.correct)
 
+    # This is called both on "show_results" and again on "next_question" for the
+    # same question. Only award points the first time so scores aren't doubled.
+    already_scored = question_index in room.scored_questions
+
     scores = {}
     for user_id, player in room.players.items():
-        player_answers = set(player.answers.get(question_index, []))
-        if player_answers == correct_answers:
-            player.score += question.points
-            player.correct_answers += 1
+        if not already_scored:
+            player_answers = set(player.answers.get(question_index, []))
+            if player_answers == correct_answers:
+                player.score += question.points
+                player.correct_answers += 1
         scores[user_id] = player.score
+
+    room.scored_questions.add(question_index)
 
     return scores
 

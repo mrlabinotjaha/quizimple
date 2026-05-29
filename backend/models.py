@@ -129,6 +129,7 @@ class Room(BaseModel):
     question_start_time: float = 0.0  # timestamp when current question started
     paused: bool = False
     time_remaining_when_paused: float = 0.0  # seconds left on timer when paused
+    scored_questions: set[int] = set()  # question indices already awarded points (prevents double-counting)
 
 
 # WebSocket message models
